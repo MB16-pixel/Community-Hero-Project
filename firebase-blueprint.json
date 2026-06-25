@@ -73,6 +73,65 @@
         }
       },
       "required": ["issueId", "userId", "description", "address", "mediaUrl", "category", "status", "timestamp"]
+    },
+    "BudgetAllocation": {
+      "title": "BudgetAllocation",
+      "description": "Proactive preventive maintenance budget allocations committed by local authorities.",
+      "type": "object",
+      "properties": {
+        "allocationId": {
+          "type": "string",
+          "description": "Unique identifier of the allocation log."
+        },
+        "userId": {
+          "type": "string",
+          "description": "ID of the user committing the budget."
+        },
+        "username": {
+          "type": "string",
+          "description": "Username of the committing authority."
+        },
+        "country": {
+          "type": "string",
+          "description": "Target country of the budget allocation."
+        },
+        "riskReduction": {
+          "type": "integer",
+          "description": "Resulting reduction in predicted infrastructure failure risk (0-100)."
+        },
+        "thermalInsulationBudget": {
+          "type": "integer",
+          "description": "Budget percentage allocated to thermal pipe insulation (0-100)."
+        },
+        "acousticSensorsBudget": {
+          "type": "integer",
+          "description": "Budget percentage allocated to acoustic leak sensors (0-100)."
+        },
+        "pipeReplacementBudget": {
+          "type": "integer",
+          "description": "Budget percentage allocated to targeted cast iron pipe replacement (0-100)."
+        },
+        "emergencyBudget": {
+          "type": "integer",
+          "description": "Budget percentage allocated to emergency response team scaling (0-100)."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "ISO timestamp of when the allocation was committed."
+        }
+      },
+      "required": [
+        "allocationId",
+        "userId",
+        "username",
+        "country",
+        "riskReduction",
+        "thermalInsulationBudget",
+        "acousticSensorsBudget",
+        "pipeReplacementBudget",
+        "emergencyBudget",
+        "timestamp"
+      ]
     }
   },
   "firestore": {
@@ -83,6 +142,10 @@
     "/issues/{issueId}": {
       "schema": "Issue",
       "description": "Collection of reported community issues."
+    },
+    "/budget_allocations/{allocationId}": {
+      "schema": "BudgetAllocation",
+      "description": "Collection of proactive budget allocations submitted by community heroes acting as local authorities."
     }
   }
 }

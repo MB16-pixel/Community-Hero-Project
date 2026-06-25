@@ -120,7 +120,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const querySnap = await getDocs(q);
 
       if (querySnap.empty) {
-        throw new Error("No user found with this email.");
+        throw new Error("Incorrect email or password.");
       }
 
       let matchedUser: UserProfile | null = null;
@@ -132,7 +132,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (!matchedUser) {
-        throw new Error("Incorrect password.");
+        throw new Error("Incorrect email or password.");
       }
 
       setUser(matchedUser);

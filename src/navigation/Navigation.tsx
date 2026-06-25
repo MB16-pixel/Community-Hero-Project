@@ -6,6 +6,7 @@ import { HomeScreen } from '../screens/HomeScreen';
 import { IssuesFeedScreen } from '../screens/IssuesFeedScreen';
 import { StatsScreen } from '../screens/StatsScreen';
 import { AccountScreen } from '../screens/AccountScreen';
+import { PredictiveScreen } from '../screens/PredictiveScreen';
 import { 
   FileText, 
   Map, 
@@ -13,7 +14,8 @@ import {
   UserCircle,
   HelpCircle,
   AlertTriangle,
-  Compass
+  Compass,
+  BrainCircuit
 } from 'lucide-react';
 
 export const Navigation: React.FC = () => {
@@ -22,8 +24,8 @@ export const Navigation: React.FC = () => {
   // Auth navigation stack state: 'login' | 'signup'
   const [authScreen, setAuthScreen] = useState<'login' | 'signup'>('login');
   
-  // Main app tab state: 'report' | 'feed' | 'stats' | 'profile'
-  const [activeTab, setActiveTab] = useState<'report' | 'feed' | 'stats' | 'profile'>('report');
+  // Main app tab state: 'report' | 'feed' | 'stats' | 'predictive' | 'profile'
+  const [activeTab, setActiveTab] = useState<'report' | 'feed' | 'stats' | 'predictive' | 'profile'>('report');
 
   if (loading) {
     return (
@@ -60,6 +62,8 @@ export const Navigation: React.FC = () => {
         return <IssuesFeedScreen />;
       case 'stats':
         return <StatsScreen />;
+      case 'predictive':
+        return <PredictiveScreen />;
       case 'profile':
         return <AccountScreen />;
       default:
@@ -115,7 +119,20 @@ export const Navigation: React.FC = () => {
           <span className="text-[10px] tracking-tight font-medium">Stats</span>
         </button>
 
-        {/* Tab 4: Account/Profile */}
+        {/* Tab 4: AI Predictive Alerts */}
+        <button
+          onClick={() => setActiveTab('predictive')}
+          className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl transition-all ${
+            activeTab === 'predictive' 
+              ? 'text-[#5A6B5D] font-bold scale-105 bg-[#F0F5F1]' 
+              : 'text-[#7A7A7A] hover:text-[#5A6B5D]'
+          }`}
+        >
+          <BrainCircuit className={`w-5 h-5 mb-0.5 ${activeTab === 'predictive' ? 'text-[#5A6B5D]' : 'text-[#7A7A7A]'}`} />
+          <span className="text-[10px] tracking-tight font-medium">Predictive</span>
+        </button>
+
+        {/* Tab 5: Account/Profile */}
         <button
           onClick={() => setActiveTab('profile')}
           className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl transition-all ${

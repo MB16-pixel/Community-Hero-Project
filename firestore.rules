@@ -42,6 +42,20 @@ service cloud.firestore {
         && (!('reporterName' in data) || (data.reporterName is string && data.reporterName.size() <= 100));
     }
 
+    // Budget Allocation Entity Validation Helper
+    function isValidBudgetAllocation(data) {
+      return data.allocationId is string && data.allocationId.size() <= 128
+        && data.userId is string && data.userId.size() <= 128
+        && data.username is string && data.username.size() <= 100
+        && data.country is string && data.country.size() <= 100
+        && (data.riskReduction is int || data.riskReduction is number)
+        && (data.thermalInsulationBudget is int || data.thermalInsulationBudget is number)
+        && (data.acousticSensorsBudget is int || data.acousticSensorsBudget is number)
+        && (data.pipeReplacementBudget is int || data.pipeReplacementBudget is number)
+        && (data.emergencyBudget is int || data.emergencyBudget is number)
+        && data.timestamp is string;
+    }
+
     // Rules for Users collection
     match /users/{userId} {
       allow read: if true;
@@ -56,6 +70,14 @@ service cloud.firestore {
       allow create: if isValidId(issueId) && isValidIssue(incoming());
       allow update: if isValidId(issueId) && isValidIssue(incoming());
       allow delete: if false; // Issues are archival
+    }
+
+    // Rules for Budget Allocations
+    match /budget_allocations/{allocationId} {
+      allow read: if true;
+      allow create: if isValidId(allocationId) && isValidBudgetAllocation(incoming());
+      allow update: if false; // Allocations are immutable historical logs
+      allow delete: if false;
     }
   }
 }
