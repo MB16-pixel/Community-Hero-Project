@@ -31,15 +31,15 @@ service cloud.firestore {
 
     // Issue Entity Validation Helper
     function isValidIssue(data) {
-      return data.issueId is string && data.issueId.size() <= 128
-        && data.userId is string && data.userId.size() <= 128
-        && data.description is string && data.description.size() >= 1 && data.description.size() <= 10000
-        && data.address is string && data.address.size() >= 1 && data.address.size() <= 2000
-        && data.mediaUrl is string && data.mediaUrl.size() <= 2000000
-        && data.category is string && data.category.size() <= 100
+      return data.issueId is string && data.issueId.size() <= 256
+        && data.userId is string && data.userId.size() <= 256
+        && data.description is string && data.description.size() >= 1 && data.description.size() <= 50000
+        && data.address is string && data.address.size() >= 1 && data.address.size() <= 10000
+        && data.mediaUrl is string
+        && data.category is string && data.category.size() <= 200
         && data.status is string && (data.status == 'Pending' || data.status == 'Verified' || data.status == 'Resolved')
         && (data.timestamp is string || data.timestamp is timestamp)
-        && (!('reporterName' in data) || (data.reporterName is string && data.reporterName.size() <= 150));
+        && (!('reporterName' in data) || (data.reporterName is string && data.reporterName.size() <= 500));
     }
 
     // Budget Allocation Entity Validation Helper
