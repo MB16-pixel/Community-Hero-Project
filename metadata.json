@@ -1,0 +1,6 @@
+{
+  "name": "Community Hero",
+  "description": "A citizen-led platform to report, track, and validate local community issues, complete with gamified XP rewards and local leaderboards.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

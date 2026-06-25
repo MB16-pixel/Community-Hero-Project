@@ -1,0 +1,88 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user of the Community Hero platform.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Unique identifier of the user (same as document ID)."
+        },
+        "username": {
+          "type": "string",
+          "description": "User's display username."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "User's email address."
+        },
+        "password": {
+          "type": "string",
+          "description": "User's password (for local/mock login simulation)."
+        },
+        "xp": {
+          "type": "integer",
+          "description": "User's accumulated Experience Points."
+        },
+        "community": {
+          "type": "string",
+          "description": "The community area the user belongs to (e.g. 'Community A', 'Local')."
+        }
+      },
+      "required": ["uid", "username", "email", "password", "xp", "community"]
+    },
+    "Issue": {
+      "title": "Issue",
+      "description": "A community issue reported by a citizen.",
+      "type": "object",
+      "properties": {
+        "issueId": {
+          "type": "string",
+          "description": "Unique identifier of the issue."
+        },
+        "userId": {
+          "type": "string",
+          "description": "ID of the user who reported the issue."
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed description of the community issue."
+        },
+        "address": {
+          "type": "string",
+          "description": "Typed address or location of the issue."
+        },
+        "mediaUrl": {
+          "type": "string",
+          "description": "Url to image placeholder or uploaded media."
+        },
+        "category": {
+          "type": "string",
+          "description": "AI-categorized issue type (e.g., Pothole, Water Leakage, Waste Management, Damaged Streetlight)."
+        },
+        "status": {
+          "type": "string",
+          "description": "Status of the issue.",
+          "enum": ["Pending", "Verified", "Resolved"]
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "ISO timestamp or server timestamp of when the issue was reported."
+        }
+      },
+      "required": ["issueId", "userId", "description", "address", "mediaUrl", "category", "status", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Collection of user profiles containing XP and credentials for login."
+    },
+    "/issues/{issueId}": {
+      "schema": "Issue",
+      "description": "Collection of reported community issues."
+    }
+  }
+}
