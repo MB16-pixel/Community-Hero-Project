@@ -22,60 +22,42 @@ export const HomeScreen: React.FC = () => {
   const [address, setAddress] = useState('');
   const [uploadedFileBase64, setUploadedFileBase64] = useState<string>('');
   
-  // AI Categorization states
-  const [detectedCategory, setDetectedCategory] = useState('Pothole');
-  const [isAiClassifying, setIsAiClassifying] = useState(false);
+  // Selected category state (manual user input)
+  const [category, setCategory] = useState('Pothole');
   
   // Submit states
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  
+  // Available categories
+  const categoriesList = [
+    "Pothole",
+    "Waste Management",
+    "Water Leakage",
+    "Damaged Streetlight",
+    "Other"
+  ];
 
   // Preset images to facilitate high-fidelity testing in browser
   const presetImages = [
     {
       name: "Pothole",
-      url: "https://images.unsplash.com/photo-1515162305285-0293e4767cc2?auto=format&fit=crop&w=500&q=80",
-      keywords: ["pothole", "hole", "cracked", "road", "street", "asphalt", "driveway"]
+      url: "https://images.unsplash.com/photo-1515162305285-0293e4767cc2?auto=format&fit=crop&w=500&q=80"
     },
     {
       name: "Waste Management",
-      url: "https://images.unsplash.com/photo-1611284446314-60a58ac0deb9?auto=format&fit=crop&w=500&q=80",
-      keywords: ["trash", "garbage", "waste", "dump", "litter", "bin", "can", "smell"]
+      url: "https://images.unsplash.com/photo-1611284446314-60a58ac0deb9?auto=format&fit=crop&w=500&q=80"
     },
     {
       name: "Water Leakage",
-      url: "https://images.unsplash.com/photo-1542013936693-8848157b13df?auto=format&fit=crop&w=500&q=80",
-      keywords: ["leak", "water", "flood", "drain", "pipe", "burst", "puddle", "hydrant"]
+      url: "https://images.unsplash.com/photo-1542013936693-8848157b13df?auto=format&fit=crop&w=500&q=80"
     },
     {
       name: "Damaged Streetlight",
-      url: "https://images.unsplash.com/photo-1509021436665-8f37bc706572?auto=format&fit=crop&w=500&q=80",
-      keywords: ["light", "streetlight", "dark", "lamp", "bulb", "broken", "night"]
+      url: "https://images.unsplash.com/photo-1509021436665-8f37bc706572?auto=format&fit=crop&w=500&q=80"
     }
   ];
-
-  // AI Categorizer rule-based simulation as they type
-  useEffect(() => {
-    if (!description.trim()) return;
-    
-    setIsAiClassifying(true);
-    const timeout = setTimeout(() => {
-      const text = description.toLowerCase();
-      let matched = 'Pothole'; // Default category
-
-      for (const preset of presetImages) {
-        if (preset.keywords.some(kw => text.includes(kw))) {
-          matched = preset.name;
-          break;
-        }
-      }
-      setDetectedCategory(matched);
-      setIsAiClassifying(false);
-    }, 450);
-
-    return () => clearTimeout(timeout);
-  }, [description]);
 
   // Handle local image file uploads
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -118,7 +100,7 @@ export const HomeScreen: React.FC = () => {
         description: description.trim(),
         address: address.trim(),
         mediaUrl,
-        category: detectedCategory,
+        category: category,
         status: 'Pending',
         timestamp: new Date().toISOString(),
         reporterName: user.username
@@ -208,14 +190,23 @@ export const HomeScreen: React.FC = () => {
                 className="w-full px-4 py-3 bg-[#FBF9F6] border border-[#E5E0D5] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#5A6B5D]/20 focus:border-[#5A6B5D] transition-all text-[#3D3D3D] resize-none"
               />
 
-              {/* Live AI Category Badge */}
-              {description.trim() && (
-                <div className="mt-2.5 flex items-center gap-2 bg-[#F0F5F1] border border-[#EDE9E0] text-[#708271] px-3 py-1.5 rounded-xl text-xs w-fit">
-                  <Sparkles className={`w-3.5 h-3.5 ${isAiClassifying ? 'animate-spin text-[#5A6B5D]' : 'text-[#5A6B5D]'}`} />
-                  <span className="font-medium">AI Category Classification:</span>
-                  <span className="font-bold bg-[#E5E0D5] text-[#2C362E] px-2 py-0.5 rounded-md">{detectedCategory}</span>
-                </div>
-              )}
+            {/* Category Select */}
+            <div>
+              <label className="block text-[10px] uppercase font-bold text-[#7A7A7A] tracking-wider mb-2">
+                Issue Category
+              </label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full px-4 py-3 bg-[#FBF9F6] border border-[#E5E0D5] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#5A6B5D]/20 focus:border-[#5A6B5D] transition-all text-[#3D3D3D] cursor-pointer"
+              >
+                {categoriesList.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+            </div>
             </div>
 
             {/* Address */}
@@ -237,7 +228,7 @@ export const HomeScreen: React.FC = () => {
               </div>
             </div>
 
-            {/* Media Upload (Expo Image Picker Simulation) */}
+            {/* Media Upload (Photo Evidence) */}
             <div>
               <label className="block text-[10px] uppercase font-bold text-[#7A7A7A] tracking-wider mb-2">
                 Upload Photo Evidence
@@ -261,7 +252,7 @@ export const HomeScreen: React.FC = () => {
                     <div className="flex flex-col items-center justify-center pt-5 pb-6">
                       <Upload className="w-8 h-8 text-slate-400 mb-2" />
                       <p className="text-xs font-bold text-[#7A7A7A]">Click to import evidence photo</p>
-                      <p className="text-[10px] text-slate-400 mt-1">Simulates Expo ImagePicker</p>
+                      <p className="text-[10px] text-slate-400 mt-1">Supports PNG, JPG, or GIF up to 5MB</p>
                     </div>
                   )}
                   <input 

@@ -252,6 +252,17 @@ export const PredictiveScreen: React.FC = () => {
           </p>
         </div>
 
+        {/* AI Disclaimer Alert Box */}
+        <div className="bg-[#FFF9F0] border border-[#EAD6BB] rounded-2xl p-3.5 flex items-start gap-3">
+          <Info className="w-4 h-4 text-[#B58750] shrink-0 mt-0.5" />
+          <div className="space-y-0.5">
+            <span className="text-[11px] font-bold text-[#7A5A2B] block">AI Disclaimer & Guidance</span>
+            <p className="text-[10px] text-[#8C6D3F] leading-relaxed font-medium">
+              Forecast models, deterioration alerts, and impact trends are generated automatically by artificial intelligence. Predictions are mathematical estimations based on historic telemetry and citizens' reports, can contain inaccuracies, and should not be used as the sole basis for critical safety decisions.
+            </p>
+          </div>
+        </div>
+
         {/* Live Filter Indicator */}
         <div className="bg-[#5A6B5D] rounded-[24px] p-4 text-white shadow-md relative overflow-hidden">
           <div className="absolute right-0 top-0 translate-x-4 -translate-y-4 w-24 h-24 bg-white/5 rounded-full pointer-events-none" />

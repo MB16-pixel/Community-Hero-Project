@@ -34,7 +34,7 @@ export default function App() {
         <div className="hidden sm:flex items-center gap-2 mb-4 bg-white/60 border border-[#E5E0D5] px-4 py-1.5 rounded-full backdrop-blur-md z-10 shadow-sm">
           <Sparkles className="w-4 h-4 text-[#5A6B5D]" />
           <span className="text-xs font-bold text-[#5A6B5D]">
-            Expo React Native Simulator (Live Firestore Sync)
+            Community Hero Link Portal
           </span>
         </div>
 
@@ -80,8 +80,8 @@ export default function App() {
 
         {/* Footer info about directories */}
         <div className="hidden sm:block mt-6 text-[11px] text-slate-500 font-medium tracking-wide text-center z-10 max-w-sm leading-normal">
-          Designed for standard <strong>React Native Expo</strong> structure.<br/>
-          Mock storage is fully backed by real-time Google Cloud Firestore.
+          Empowering neighborhoods through collective action.<br/>
+          Real-time reports are verified and synchronized live.
         </div>
       </div>
     </AuthProvider>
