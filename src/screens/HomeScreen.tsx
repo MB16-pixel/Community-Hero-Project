@@ -13,7 +13,6 @@ import {
   Flame,
   Award
 } from 'lucide-react';
-import { MapPickerModal } from '../components/MapPickerModal';
 
 export const HomeScreen: React.FC = () => {
   const { user, gainXP } = useAuth();
@@ -31,7 +30,6 @@ export const HomeScreen: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [isMapOpen, setIsMapOpen] = useState(false);
 
   // Preset images to facilitate high-fidelity testing in browser
   const presetImages = [
@@ -222,37 +220,20 @@ export const HomeScreen: React.FC = () => {
 
             {/* Address */}
             <div>
-              <div className="flex justify-between items-center mb-2">
-                <label className="block text-[10px] uppercase font-bold text-[#7A7A7A] tracking-wider">
-                  Address or Location
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setIsMapOpen(true)}
-                  className="text-[11px] font-bold text-[#5A6B5D] hover:text-[#4A594D] transition-colors flex items-center gap-1 cursor-pointer"
-                >
-                  <MapPin className="w-3.5 h-3.5" />
-                  Choose on Map
-                </button>
-              </div>
+              <label className="block text-[10px] uppercase font-bold text-[#7A7A7A] tracking-wider mb-2">
+                Address or Location
+              </label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
                   <MapPin className="w-4 h-4 text-[#5A6B5D]" />
                 </span>
                 <input
                   type="text"
-                  placeholder="e.g. 742 Evergreen Terrace, Green Valley"
+                  placeholder="e.g. 742 Evergreen Terrace, United States"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
-                  className="w-full pl-10 pr-20 py-3 bg-[#FBF9F6] border border-[#E5E0D5] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#5A6B5D]/20 focus:border-[#5A6B5D] transition-all text-[#3D3D3D]"
+                  className="w-full pl-10 pr-4 py-3 bg-[#FBF9F6] border border-[#E5E0D5] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#5A6B5D]/20 focus:border-[#5A6B5D] transition-all text-[#3D3D3D]"
                 />
-                <button
-                  type="button"
-                  onClick={() => setIsMapOpen(true)}
-                  className="absolute right-2 top-1.5 bottom-1.5 px-3 bg-[#EAE4D8]/60 hover:bg-[#EAE4D8] text-[#5A6B5D] border border-[#DCD6C8] rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
-                >
-                  <span>Select</span>
-                </button>
               </div>
             </div>
 
@@ -311,13 +292,6 @@ export const HomeScreen: React.FC = () => {
           </form>
         </div>
       </div>
-
-      <MapPickerModal
-        isOpen={isMapOpen}
-        onClose={() => setIsMapOpen(false)}
-        onSelectAddress={(addr) => setAddress(addr)}
-        initialAddress={address}
-      />
     </div>
   );
 };

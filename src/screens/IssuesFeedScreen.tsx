@@ -130,11 +130,11 @@ export const IssuesFeedScreen: React.FC = () => {
       return issue.userId === user?.uid;
     }
     if (activeFilter === 'nearby') {
-      // Find issues belonging to the user's community district
-      // We check if the address or category/reporter has the community name, 
-      // or we check if user.community is in the address
-      const userComm = user?.community || "Local";
-      return issue.address.toLowerCase().includes(userComm.toLowerCase());
+      // Find issues belonging to the user's country
+      const userComm = user?.community || "United States";
+      const countryNameOnly = userComm.replace(/[^\w\s]/g, '').trim();
+      return issue.address.toLowerCase().includes(countryNameOnly.toLowerCase()) || 
+             issue.address.toLowerCase().includes(userComm.toLowerCase());
     }
     return true; // 'all'
   });
@@ -223,7 +223,10 @@ export const IssuesFeedScreen: React.FC = () => {
                 : 'bg-white text-[#708271] border-[#EDE9E0] hover:bg-[#F4EFE6]'
             }`}
           >
-            {user?.community || "Local"} district ({issues.filter(i => i.address.toLowerCase().includes((user?.community || "Local").toLowerCase())).length})
+            {user?.community || "🇺🇸 United States"} ({issues.filter(i => {
+              const countryName = (user?.community || "United States").replace(/[^\w\s]/g, '').trim();
+              return i.address.toLowerCase().includes(countryName.toLowerCase());
+            }).length})
           </button>
         </div>
       </div>
@@ -251,7 +254,7 @@ export const IssuesFeedScreen: React.FC = () => {
               {activeFilter === 'my_issues' 
                 ? "You haven't reported any issues yet. Click the 'Report' tab to start earning XP!" 
                 : activeFilter === 'nearby' 
-                ? `No issues logged near "${user?.community || "Local"}" district yet. Be the first hero to log one!`
+                ? `No issues logged in ${user?.community || "United States"} yet. Be the first hero to log one!`
                 : "The active database is currently empty of community reports."}
             </p>
 

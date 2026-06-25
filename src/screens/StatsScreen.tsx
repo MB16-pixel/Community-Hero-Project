@@ -32,18 +32,18 @@ export const StatsScreen: React.FC = () => {
       collection(db, 'users'),
       (snapshot) => {
         const communityMap: { [key: string]: { xp: number; members: number } } = {
-          "Green Valley": { xp: 1250, members: 4 },  // seed base numbers for gamified feeling
-          "Metro Core": { xp: 2100, members: 6 },
-          "South Shore": { xp: 850, members: 3 },
-          "Sunset Ridge": { xp: 1400, members: 5 },
-          "East District": { xp: 900, members: 3 }
+          "🇺🇸 United States": { xp: 3200, members: 12 },
+          "🇬🇧 United Kingdom": { xp: 2450, members: 8 },
+          "🇨🇦 Canada": { xp: 1800, members: 6 },
+          "🇦🇺 Australia": { xp: 1200, members: 4 },
+          "🇯🇵 Japan": { xp: 950, members: 3 }
         };
 
         let citizensCount = 0;
 
         snapshot.forEach((docSnap) => {
           const u = docSnap.data();
-          const comm = u.community || "Local";
+          const comm = u.community || "🇺🇸 United States";
           const xp = Number(u.xp) || 0;
           citizensCount++;
 
@@ -77,8 +77,8 @@ export const StatsScreen: React.FC = () => {
     return () => unsubscribe();
   }, [user]);
 
-  // Find user's community district and its current rank
-  const userCommunity = user?.community || "Local";
+  // Find user's country and its current rank
+  const userCommunity = user?.community || "🇺🇸 United States";
   const userCommRankIndex = leaderboard.findIndex(item => item.community.toLowerCase() === userCommunity.toLowerCase());
   const userCommRank = userCommRankIndex !== -1 ? userCommRankIndex + 1 : null;
   const userCommScore = userCommRankIndex !== -1 ? leaderboard[userCommRankIndex].xp : 0;
@@ -112,7 +112,7 @@ export const StatsScreen: React.FC = () => {
                 <p className="text-xs text-[#EDE9E0] mt-1 font-medium">Accumulated from community reports</p>
               </div>
               <div className="bg-white/10 px-4 py-2.5 rounded-2xl border border-white/20 text-right">
-                <span className="text-[10px] uppercase text-[#EAE4D8] font-bold block">District Rank</span>
+                <span className="text-[10px] uppercase text-[#EAE4D8] font-bold block">Country Rank</span>
                 <span className="text-sm font-bold text-white">#{userCommRank || 'N/A'}</span>
               </div>
             </div>
@@ -149,7 +149,7 @@ export const StatsScreen: React.FC = () => {
               <TrendingUp className="w-5 h-5" />
             </div>
             <div>
-              <span className="text-[9px] text-[#7A7A7A] uppercase font-bold block tracking-wider">District XP</span>
+              <span className="text-[9px] text-[#7A7A7A] uppercase font-bold block tracking-wider">Country XP</span>
               <span className="text-lg font-serif font-bold text-[#2C362E]">{userCommScore}</span>
             </div>
           </div>
@@ -160,7 +160,7 @@ export const StatsScreen: React.FC = () => {
           <div className="flex justify-between items-center mb-5">
             <h3 className="font-serif font-bold text-[#2C362E] flex items-center gap-2">
               <Trophy className="w-5 h-5 text-[#D9835D] fill-[#D9835D]" />
-              District Cup
+              Country Cup
             </h3>
             <span className="text-xs bg-[#F0F5F1] text-[#5A6B5D] px-3 py-1 rounded-full font-bold border border-[#EDE9E0]">
               Real-time Sum
@@ -238,8 +238,9 @@ export const StatsScreen: React.FC = () => {
 
           {/* Leaderboard CTA info */}
           <p className="text-[11px] text-[#7A7A7A] font-medium mt-5 leading-normal bg-[#FBF9F6] p-3.5 rounded-2xl text-center border border-[#EDE9E0]">
-            Submit issues from your district to boost your rank on the leaderboard! Each approved report awards your district <strong>+50 XP</strong>.
+            Submit issues from your country to boost your rank on the leaderboard! Each approved report awards your country <strong>+50 XP</strong>.
           </p>
+
         </div>
       </div>
     </div>

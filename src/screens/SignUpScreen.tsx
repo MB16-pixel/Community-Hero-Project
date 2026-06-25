@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { AlertCircle, User, Mail, Lock, ShieldCheck, MapPin } from 'lucide-react';
+import { COUNTRIES } from '../types';
 
 interface SignUpScreenProps {
   onNavigateToLogin: () => void;
@@ -11,16 +12,8 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ onNavigateToLogin })
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [community, setCommunity] = useState('Green Valley');
+  const [community, setCommunity] = useState('🇺🇸 United States');
   const [formError, setFormError] = useState<string | null>(null);
-
-  const communities = [
-    "Green Valley",
-    "Metro Core",
-    "South Shore",
-    "Sunset Ridge",
-    "East District"
-  ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,9 +113,9 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ onNavigateToLogin })
               </div>
             </div>
 
-            {/* Community/District Dropdown */}
+            {/* Country Dropdown */}
             <div>
-              <label className="block text-[10px] uppercase font-bold text-[#7A7A7A] tracking-wider mb-1.5">Community District</label>
+              <label className="block text-[10px] uppercase font-bold text-[#7A7A7A] tracking-wider mb-1.5">Country</label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
                   <MapPin className="w-4 h-4 text-[#5A6B5D]" />
@@ -130,12 +123,19 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ onNavigateToLogin })
                 <select
                   value={community}
                   onChange={(e) => setCommunity(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-[#FBF9F6] border border-[#E5E0D5] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#5A6B5D]/20 focus:border-[#5A6B5D] transition-all text-[#3D3D3D] appearance-none cursor-pointer"
+                  className="w-full pl-10 pr-10 py-3 bg-[#FBF9F6] border border-[#E5E0D5] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#5A6B5D]/20 focus:border-[#5A6B5D] transition-all text-[#3D3D3D] appearance-none cursor-pointer font-medium"
                 >
-                  {communities.map((c) => (
-                    <option key={c} value={c}>{c}</option>
+                  {COUNTRIES.map((country) => (
+                    <option key={country.name} value={`${country.flag} ${country.name}`}>
+                      {country.flag} {country.name}
+                    </option>
                   ))}
                 </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-[#5A6B5D]">
+                  <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                    <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                  </svg>
+                </div>
               </div>
             </div>
 

@@ -21,7 +21,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<UserProfile>;
   logout: () => void;
   gainXP: (points: number) => Promise<void>;
-  updateProfile: (username: string, email: string, password: string) => Promise<void>;
+  updateProfile: (username: string, email: string, password: string, community?: string) => Promise<void>;
   deleteAccount: () => Promise<void>;
   clearError: () => void;
 }
@@ -173,7 +173,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Phase 2 Tab 4: Update Profile Form Action
-  const updateProfile = async (username: string, email: string, password: string) => {
+  const updateProfile = async (username: string, email: string, password: string, community?: string) => {
     if (!user) return;
     setLoading(true);
     setError(null);
@@ -190,13 +190,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       const userRef = doc(db, 'users', user.uid);
-      await updateDoc(userRef, {
+      const updateData: any = {
         username,
         email: email.toLowerCase(),
         password
-      });
+      };
+      if (community) {
+        updateData.community = community;
+      }
+      await updateDoc(userRef, updateData);
 
-      const updatedUser = { ...user, username, email: email.toLowerCase(), password };
+      const updatedUser = { 
+        ...user, 
+        username, 
+        email: email.toLowerCase(), 
+        password,
+        ...(community ? { community } : {})
+      };
       setUser(updatedUser);
       localStorage.setItem('community_hero_session', JSON.stringify(updatedUser));
     } catch (err: any) {

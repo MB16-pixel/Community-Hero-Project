@@ -13,6 +13,7 @@ import {
   MapPin,
   ShieldAlert
 } from 'lucide-react';
+import { COUNTRIES } from '../types';
 
 export const AccountScreen: React.FC = () => {
   const { user, updateProfile, deleteAccount, logout, error, loading, clearError } = useAuth();
@@ -21,6 +22,7 @@ export const AccountScreen: React.FC = () => {
   const [username, setUsername] = useState(user?.username || '');
   const [email, setEmail] = useState(user?.email || '');
   const [password, setPassword] = useState(user?.password || '');
+  const [community, setCommunity] = useState(user?.community || '🇺🇸 United States');
   
   // Alert/Feedback states
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
@@ -44,8 +46,8 @@ export const AccountScreen: React.FC = () => {
     }
 
     try {
-      await updateProfile(username.trim(), email.trim(), password);
-      setFormSuccess("Profile credentials updated successfully in Firestore!");
+      await updateProfile(username.trim(), email.trim(), password, community);
+      setFormSuccess("Profile credentials and country updated successfully in Firestore!");
       setTimeout(() => setFormSuccess(null), 4000);
     } catch (err: any) {
       console.error(err);
@@ -76,7 +78,7 @@ export const AccountScreen: React.FC = () => {
             <h1 className="text-xl font-serif font-bold text-[#2C362E]">{user?.username}</h1>
             <p className="text-xs text-[#7A7A7A] flex items-center gap-1 mt-0.5 font-medium">
               <MapPin className="w-3 h-3 text-[#D9835D] fill-[#D9835D]" />
-              District: {user?.community}
+              Country: {user?.community}
             </p>
           </div>
         </div>
@@ -151,6 +153,32 @@ export const AccountScreen: React.FC = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 bg-[#FBF9F6] border border-[#EDE9E0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#5A6B5D]/20 focus:border-[#5A6B5D] transition-all text-[#3D3D3D] font-medium"
                 />
+              </div>
+            </div>
+
+            {/* Country Select Input */}
+            <div>
+              <label className="block text-[9px] font-bold text-[#7A7A7A] uppercase tracking-wider mb-1">Country</label>
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-[#7A7A7A]">
+                  <MapPin className="w-4 h-4 text-[#5A6B5D]" />
+                </span>
+                <select
+                  value={community}
+                  onChange={(e) => setCommunity(e.target.value)}
+                  className="w-full pl-10 pr-10 py-3 bg-[#FBF9F6] border border-[#EDE9E0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#5A6B5D]/20 focus:border-[#5A6B5D] transition-all text-[#3D3D3D] appearance-none cursor-pointer font-medium"
+                >
+                  {COUNTRIES.map((country) => (
+                    <option key={country.name} value={`${country.flag} ${country.name}`}>
+                      {country.flag} {country.name}
+                    </option>
+                  ))}
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-[#5A6B5D]">
+                  <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                    <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                  </svg>
+                </div>
               </div>
             </div>
 
