@@ -11,20 +11,22 @@ An interactive, gamified, and AI-powered civic engagement platform designed for 
 - **Mandatory Location Validation**: Requires precise address/location routing to guarantee actionable municipal and citizen coordination.
 - **Durable Persistence**: All reports are written and synchronized instantly using **Firebase Firestore** to allow cross-device and multi-user visibility.
 
-### 2. 🧠 Gemini AI Semantic Duplicate Detector
-- **Semantic Analysis**: Integrates the official `@google/genai` SDK via a secure server-side Express proxy to scan existing active neighborhood issues in real-time and identify semantic duplicates.
-- **Prevent Multi-Submissions**: Warns users if their reported issue matches an existing report in the system, detailing the duplicate match and advising them on how to help resolve the existing issue instead.
-- **Exponential Backoff Resilience**: Uses custom server-side retries to smoothly manage transient 503 UNAVAILABLE or 429 rate-limit surges on Gemini API endpoints without impacting user experience.
+### 2. 🧠 Gemini AI Civic Optimization Suite
+- **AI Rephrasing Assistant (Rephrase with Gemini)**: Restored to full functionality! Integrates the official `@google/genai` SDK via a secure server-side Express proxy to rewrite raw, informal reports (e.g., *"huge bump in street near shop"*) into polite, highly professional, and descriptive logs suited for city hazard databases. Users can preview suggestions and instantly click to apply or dismiss them.
+- **Semantic Duplicate Detector (Scan For Duplicates)**: Performs real-time semantic analysis comparing new entries against existing neighborhood reports to identify exact or highly similar duplicates in close proximity, preventing spam and keeping the database clean.
+- **Automated Severity Classification**: Dynamically predicts issue severity (*Low*, *Medium*, *High*, *Critical*) based on safety hazard profiles and provides detailed reasoning to accelerate local prioritization.
+- **Exponential Backoff Resilience**: Features custom server-side retries to smoothly handle transient Gemini API rate limits or surges without disrupting the user flow.
 
 ### 3. 🎮 Gamification & Citizen Leaderboard
 - **Dynamic XP Engine**: Gain **+50 Experience Points (XP)** for every civic report filed.
 - **Dynamic Progress Bar**: Live progress tracking indicating points remaining until advancing to the next virtual citizen badge level.
 - **National Community Leaderboard**: Tracks total regional civic XP, charting engagement across several countries (*United States*, *United Kingdom*, *Canada*, *Australia*, *Japan*, etc.).
 
-### 4. 🧭 Interactive Collaborative Feed
+### 4. 🧭 Interactive Collaborative Feed & Resolution Pledges
 - **Real-Time Synchronization**: Instantly reflects issues reported by other users in the district.
 - **Smart Filtering**: Filter feed reports by *All*, *My Issues*, or *Nearby* (tailored to the logged-in user's regional profile).
-- **Collaborative Status Lifecycle**: Community members can verify or resolve issues directly, changing status from *Pending* to *Verified* or *Resolved*.
+- **Collaborative Support & Action Pledges**: Community members can actively back neighbor reports by pledging concrete resources. Residents can choose to pledge **Labor** (hands-on support, crew coordination), **Tools & Equipment** (providing utility signs, asphalt patch, safety cones), or **Advocacy & Coordination** (reaching out to city officials, amplifying awareness) accompanied by a personalized message to coordinate community-led action.
+- **Collaborative Status Lifecycle**: Community members can verify or resolve issues directly, changing status from *Pending* to *Verified* or *Resolved* with optional proof media.
 
 ### 5. 📊 AI Predictive Analytics & Risk Forecasting
 - **Live Civic Timelines**: Implements **Recharts** area charts charting the historical accumulation of community reports.
@@ -46,12 +48,13 @@ An interactive, gamified, and AI-powered civic engagement platform designed for 
 - **Backend**: Node.js Express Server (Port 3000)
 - **Database**: Firebase Firestore (Durable persistent database)
 - **Auth**: Firebase Authentication (Safe sign-up, email login, and neighborhood allocation)
-- **AI Integration**: Google Gen AI Node SDK (`@google/genai` targeting the `gemini-2.5-flash` model)
+- **AI Integration**: Google Gen AI Node SDK (`@google/genai` targeting the `gemini-3.5-flash` model)
 
 ---
 
 ## 🚀 How It Works (The Core Loop)
 1. **Sign Up**: Register with your email and designate your community region.
-2. **Describe & Check**: Write your hazard description and click **Scan For Duplicates** to ensure it hasn't been reported.
-3. **Submit**: Enter location context, choose a category, and save. Watch your XP level up with custom sounds and toast animations.
-4. **Analyze**: Head to the **Predictive** tab to run simulations of civic neglect in your country.
+2. **Describe & Rephrase**: Write your raw hazard description and tap **Rephrase with Gemini** to let AI rewrite it into a polite, descriptive log sentence.
+3. **Scan For Duplicates**: Click **Scan For Duplicates** to ensure a similar issue hasn't been reported in your vicinity.
+4. **Pledge & Coordinate**: Browse neighbor reports, pledge Labor, Tools, or advocacy support to help solve pending civic issues collaboratively.
+5. **Analyze**: Head to the **Predictive** tab to run simulations of civic neglect in your country.

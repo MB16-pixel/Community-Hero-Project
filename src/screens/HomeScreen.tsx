@@ -35,6 +35,11 @@ export const HomeScreen: React.FC = () => {
   const [success, setSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  // AI Explain states
+  const [isExplaining, setIsExplaining] = useState(false);
+  const [aiExplanation, setAiExplanation] = useState<string | null>(null);
+  const [explainError, setExplainError] = useState<string | null>(null);
+
   // Severity Level State (Automated and Manual override)
   const [severity, setSeverity] = useState<'Low' | 'Medium' | 'High' | 'Critical'>('Medium');
   const [severityExplanation, setSeverityExplanation] = useState<string>('');
@@ -117,6 +122,73 @@ export const HomeScreen: React.FC = () => {
         setUploadedFileBase64(reader.result as string);
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  // AI Explain handler (AI Rephrase feature)
+  const handleAiExplain = async () => {
+    if (!description.trim()) return;
+    audio.playClick();
+    setIsExplaining(true);
+    setExplainError(null);
+    setAiExplanation(null);
+
+    try {
+      const response = await fetch('/api/explain', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          description: description.trim(),
+          category: category,
+        }),
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to fetch explanation');
+      }
+
+      const data = await response.json();
+      if (data.analysis) {
+        setAiExplanation(data.analysis);
+        if (data.severity) {
+          setSeverity(data.severity);
+        }
+        if (data.severityExplanation) {
+          setSeverityExplanation(data.severityExplanation);
+        }
+        if (data.suggestedCategory) {
+          setCategory(data.suggestedCategory);
+        }
+        audio.playSuccess();
+      } else if (data.error) {
+        throw new Error(data.error);
+      } else {
+        throw new Error('Invalid server response');
+      }
+    } catch (err: any) {
+      console.error(err);
+      const errMsg = err?.message || String(err);
+      
+      if (
+        errMsg.includes("503") || 
+        errMsg.includes("UNAVAILABLE") || 
+        errMsg.includes("high demand") || 
+        errMsg.includes("temporary") ||
+        errMsg.includes("status") ||
+        errMsg.includes("code") ||
+        errMsg.includes("Resource exhausted") ||
+        errMsg.startsWith("{")
+      ) {
+        setExplainError("The AI service is currently experiencing high demand. Please wait a moment and try again!");
+      } else {
+        setExplainError(errMsg || 'Failed to get Gemini analysis.');
+      }
+      audio.playTick();
+    } finally {
+      setIsExplaining(false);
     }
   };
 
@@ -354,16 +426,79 @@ export const HomeScreen: React.FC = () => {
               />
 
               {description.trim().length >= 5 && (
-                <div className="pt-1">
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    type="button"
+                    onClick={handleAiExplain}
+                    disabled={isExplaining || isCheckingDuplicates}
+                    className="flex-1 flex items-center justify-center gap-2.5 px-4 py-3 bg-[#F4EFE6] hover:bg-[#EAE4D8] text-[#5A6B5D] font-bold text-xs rounded-xl transition-all cursor-pointer border border-[#EDE9E0]"
+                  >
+                    <Sparkles className={`w-4 h-4 ml-1.5 mr-1 ${isExplaining ? 'animate-spin' : ''}`} />
+                    <span>{isExplaining ? 'AI Analyzing...' : 'Rephrase with Gemini'}</span>
+                  </button>
                   <button
                     type="button"
                     onClick={handleCheckDuplicates}
-                    disabled={isCheckingDuplicates}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#FFF2ED] hover:bg-[#FFE3D8] text-[#D9835D] font-bold text-xs rounded-xl transition-all cursor-pointer border border-[#FEE3D8]"
+                    disabled={isExplaining || isCheckingDuplicates}
+                    className="flex-1 flex items-center justify-center gap-2.5 px-4 py-3 bg-[#FFF2ED] hover:bg-[#FFE3D8] text-[#D9835D] font-bold text-xs rounded-xl transition-all cursor-pointer border border-[#FEE3D8]"
                   >
-                    <Search className={`w-4 h-4 mx-1.5 ${isCheckingDuplicates ? 'animate-spin' : ''}`} />
+                    <Search className={`w-4 h-4 ml-1.5 mr-1 ${isCheckingDuplicates ? 'animate-spin' : ''}`} />
                     <span>{isCheckingDuplicates ? 'Scanning Duplicates...' : 'Scan For Duplicates'}</span>
                   </button>
+                </div>
+              )}
+
+              {isExplaining && (
+                <div className="p-3 bg-[#FBF9F6] border border-dashed border-[#5A6B5D]/30 rounded-xl text-xs space-y-1 animate-pulse text-[#5A6B5D]">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-3.5 h-3.5 animate-spin text-[#5A6B5D]" />
+                    <span className="font-bold">Rephrasing with Gemini AI...</span>
+                  </div>
+                </div>
+              )}
+
+              {explainError && (
+                <div className="p-3 bg-rose-50 border border-rose-100 text-rose-600 rounded-xl text-xs flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
+                  <span>{explainError}</span>
+                </div>
+              )}
+
+              {aiExplanation && !isExplaining && (
+                <div className="p-3.5 bg-gradient-to-br from-[#FDFCF7] to-[#FBF9F6] border border-[#E5E0D5] rounded-xl text-xs text-[#3D3D3D] space-y-2.5 shadow-inner">
+                  <div className="flex items-center justify-between border-b border-[#EDE9E0] pb-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-[#5A6B5D]" />
+                      <span className="font-bold text-[#2C362E] uppercase tracking-wider text-[9px]">Suggested Rephrasing</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          audio.playSuccess();
+                          setDescription(aiExplanation);
+                          setAiExplanation(null);
+                        }}
+                        className="text-[10px] text-[#5A6B5D] hover:text-[#455247] font-bold cursor-pointer underline decoration-dotted"
+                      >
+                        Apply Rephrasing
+                      </button>
+                      <span className="text-[#EDE9E0]">|</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          audio.playClick();
+                          setAiExplanation(null);
+                        }}
+                        className="text-[10px] text-[#7A7A7A] hover:text-[#3D3D3D] font-bold cursor-pointer"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  </div>
+                  <div className="leading-relaxed font-sans text-stone-700 italic">
+                    "{aiExplanation}"
+                  </div>
                 </div>
               )}
 
