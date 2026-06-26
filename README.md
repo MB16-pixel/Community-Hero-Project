@@ -11,9 +11,9 @@ An interactive, gamified, and AI-powered civic engagement platform designed for 
 - **Mandatory Location Validation**: Requires precise address/location routing to guarantee actionable municipal and citizen coordination.
 - **Durable Persistence**: All reports are written and synchronized instantly using **Firebase Firestore** to allow cross-device and multi-user visibility.
 
-### 2. 🧠 Gemini AI Rephrasing Assistant
-- **Professional Rephraser**: Integrates the official `@google/genai` SDK via a secure server-side Express proxy to rewrite raw, informal reports (e.g., *"very deep pothole"*) into polite, highly professional, and descriptive descriptions suited for city hazard logs.
-- **Context-Aware Previews**: Displays suggested phrasing on an interactive card within the input field. Users can instantly choose to **Apply Rephrasing** (auto-filling the text area) or **Dismiss**.
+### 2. 🧠 Gemini AI Semantic Duplicate Detector
+- **Semantic Analysis**: Integrates the official `@google/genai` SDK via a secure server-side Express proxy to scan existing active neighborhood issues in real-time and identify semantic duplicates.
+- **Prevent Multi-Submissions**: Warns users if their reported issue matches an existing report in the system, detailing the duplicate match and advising them on how to help resolve the existing issue instead.
 - **Exponential Backoff Resilience**: Uses custom server-side retries to smoothly manage transient 503 UNAVAILABLE or 429 rate-limit surges on Gemini API endpoints without impacting user experience.
 
 ### 3. 🎮 Gamification & Citizen Leaderboard
@@ -25,7 +25,6 @@ An interactive, gamified, and AI-powered civic engagement platform designed for 
 - **Real-Time Synchronization**: Instantly reflects issues reported by other users in the district.
 - **Smart Filtering**: Filter feed reports by *All*, *My Issues*, or *Nearby* (tailored to the logged-in user's regional profile).
 - **Collaborative Status Lifecycle**: Community members can verify or resolve issues directly, changing status from *Pending* to *Verified* or *Resolved*.
-- **Demo Seeding Pipeline**: Easily seed fully populated, realistic mock records (with real coordinates, categories, and high-fidelity mock media) to demonstrate the app's full capabilities instantly.
 
 ### 5. 📊 AI Predictive Analytics & Risk Forecasting
 - **Live Civic Timelines**: Implements **Recharts** area charts charting the historical accumulation of community reports.
@@ -53,7 +52,6 @@ An interactive, gamified, and AI-powered civic engagement platform designed for 
 
 ## 🚀 How It Works (The Core Loop)
 1. **Sign Up**: Register with your email and designate your community region.
-2. **Describe**: Write a raw hazard description (e.g., *"ugly trash heap on Elm St"*).
-3. **Refine**: Tap **Rephrase Issue** to let Gemini rewrite it into a polite, descriptive log sentence. Apply it.
-4. **Submit**: Enter location context, and save. Watch your XP level up with custom sounds and toast animations.
-5. **Analyze**: Head to the **Predictive** tab to run simulations of civic neglect in your country.
+2. **Describe & Check**: Write your hazard description and click **Scan For Duplicates** to ensure it hasn't been reported.
+3. **Submit**: Enter location context, choose a category, and save. Watch your XP level up with custom sounds and toast animations.
+4. **Analyze**: Head to the **Predictive** tab to run simulations of civic neglect in your country.
