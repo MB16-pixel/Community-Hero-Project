@@ -1,20 +1,59 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# 🏛️ Community Hero: Civic Hazard Hub
 
-# Run and deploy your AI Studio app
+An interactive, gamified, and AI-powered civic engagement platform designed for neighbors to report local hazards, collaborate on resolutions, and forecast urban infrastructure risks.
 
-This contains everything you need to run your app locally.
+---
 
-View your app in AI Studio: https://ai.studio/apps/280f3e42-a1fd-4a8b-bfe3-74f2d567c260
+## ✨ Core Features
 
-## Run Locally
+### 1. 📋 Real-Time Civil Hazard Reporting
+- **Category Preset Selector**: Report issues across standard categories (*Potholes*, *Water Leakage*, *Damaged Streetlights*, *Trash Piles*, and more).
+- **Mandatory Location Validation**: Requires precise address/location routing to guarantee actionable municipal and citizen coordination.
+- **Durable Persistence**: All reports are written and synchronized instantly using **Firebase Firestore** to allow cross-device and multi-user visibility.
 
-**Prerequisites:**  Node.js
+### 2. 🧠 Gemini AI Rephrasing Assistant
+- **Professional Rephraser**: Integrates the official `@google/genai` SDK via a secure server-side Express proxy to rewrite raw, informal reports (e.g., *"very deep pothole"*) into polite, highly professional, and descriptive descriptions suited for city hazard logs.
+- **Context-Aware Previews**: Displays suggested phrasing on an interactive card within the input field. Users can instantly choose to **Apply Rephrasing** (auto-filling the text area) or **Dismiss**.
+- **Exponential Backoff Resilience**: Uses custom server-side retries to smoothly manage transient 503 UNAVAILABLE or 429 rate-limit surges on Gemini API endpoints without impacting user experience.
 
+### 3. 🎮 Gamification & Citizen Leaderboard
+- **Dynamic XP Engine**: Gain **+50 Experience Points (XP)** for every civic report filed.
+- **Dynamic Progress Bar**: Live progress tracking indicating points remaining until advancing to the next virtual citizen badge level.
+- **National Community Leaderboard**: Tracks total regional civic XP, charting engagement across several countries (*United States*, *United Kingdom*, *Canada*, *Australia*, *Japan*, etc.).
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+### 4. 🧭 Interactive Collaborative Feed
+- **Real-Time Synchronization**: Instantly reflects issues reported by other users in the district.
+- **Smart Filtering**: Filter feed reports by *All*, *My Issues*, or *Nearby* (tailored to the logged-in user's regional profile).
+- **Collaborative Status Lifecycle**: Community members can verify or resolve issues directly, changing status from *Pending* to *Verified* or *Resolved*.
+- **Demo Seeding Pipeline**: Easily seed fully populated, realistic mock records (with real coordinates, categories, and high-fidelity mock media) to demonstrate the app's full capabilities instantly.
+
+### 5. 📊 AI Predictive Analytics & Risk Forecasting
+- **Live Civic Timelines**: Implements **Recharts** area charts charting the historical accumulation of community reports.
+- **AI Backlog Forecast Simulator**: Interactive slider simulating the compound effects of maintenance response delays. Users can adjust horizons from 15 to 90 days and set simulated response speeds (*Swift Resolution <3 Days*, *10-Day Lag*, *Severe Neglect >21 Days*) to watch the backlog exponentially climb or shrink.
+- **Cascade Deterioration Warnings**: Displays dynamic AI evaluations showing secondary hazard risks (e.g., how deferred water leaks weaken road sub-base to cause sinkholes, or how neglect expands pothole diameters 4x).
+- **Financial Risk Matrix**: Computes the financial multiplier cost of inaction (e.g., deferred water repairs result in a 5x cost multiplier, potholes result in an 8x structural collapse multiplier).
+
+### 6. 🎨 Premium Interface & Tactile Micro-Interactions
+- **Cohesive Warm Slate Palette**: Soft off-white backgrounds paired with elegant, organic forest greens (`#5A6B5D`) and amber highlights.
+- **Spring-Animated Toast Pop-ups**: Beautiful contextual pop-up alerts driven by **Framer Motion** for success entries, validation warnings, and errors.
+- **Physical Audio Synthesizer**: Features a dedicated web-audio synthesizer (`audio.ts`) triggering custom, hand-crafted sound frequencies for clicks, alert ticks, successes, and level-ups.
+
+---
+
+## 🛠️ Technology Stack
+
+- **Frontend**: React 18, Vite, Tailwind CSS, Lucide Icons, Framer Motion (`motion/react`)
+- **Visualizations**: Recharts (Responsive Area, Bar, and Pie chart instances)
+- **Backend**: Node.js Express Server (Port 3000)
+- **Database**: Firebase Firestore (Durable persistent database)
+- **Auth**: Firebase Authentication (Safe sign-up, email login, and neighborhood allocation)
+- **AI Integration**: Google Gen AI Node SDK (`@google/genai` targeting the `gemini-2.5-flash` model)
+
+---
+
+## 🚀 How It Works (The Core Loop)
+1. **Sign Up**: Register with your email and designate your community region.
+2. **Describe**: Write a raw hazard description (e.g., *"ugly trash heap on Elm St"*).
+3. **Refine**: Tap **Rephrase Issue** to let Gemini rewrite it into a polite, descriptive log sentence. Apply it.
+4. **Submit**: Enter location context, and save. Watch your XP level up with custom sounds and toast animations.
+5. **Analyze**: Head to the **Predictive** tab to run simulations of civic neglect in your country.
