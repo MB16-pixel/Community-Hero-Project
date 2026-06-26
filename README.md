@@ -1,4 +1,4 @@
-# 🏛️ Community Hero: Civic Hazard Hub
+# 🏛️ Community Hero: Hyperlocal Problem Solver
 
 An interactive, gamified, and AI-powered civic engagement platform designed for neighbors to report local hazards, collaborate on resolutions, and forecast urban infrastructure risks.
 
@@ -24,7 +24,6 @@ An interactive, gamified, and AI-powered civic engagement platform designed for 
 - **Real-Time Synchronization**: Instantly reflects issues reported by other users in the district.
 - **Smart Filtering**: Filter feed reports by *All*, *My Issues*, or *Nearby* (tailored to the logged-in user's regional profile).
 - **Collaborative Status Lifecycle**: Community members can verify or resolve issues directly, changing status from *Pending* to *Verified* or *Resolved*.
-- **Demo Seeding Pipeline**: Easily seed fully populated, realistic mock records (with real coordinates, categories, and high-fidelity mock media) to demonstrate the app's full capabilities instantly.
 
 ### 5. 📊 AI Predictive Analytics & Risk Forecasting
 - **Live Civic Timelines**: Implements **Recharts** area charts charting the historical accumulation of community reports.
