@@ -7,6 +7,15 @@ export interface UserProfile {
   community: string;
 }
 
+export interface HelpPledge {
+  pledgeId: string;
+  userId: string;
+  username: string;
+  type: 'labor' | 'material' | 'financial' | 'advocacy';
+  notes: string;
+  timestamp: string;
+}
+
 export interface IssueReport {
   issueId: string;
   userId: string;
@@ -17,6 +26,19 @@ export interface IssueReport {
   status: 'Pending' | 'Verified' | 'Resolved';
   timestamp: string; // ISO string format for robust client storage
   reporterName?: string; // Cache reporter name for easier lists
+  
+  // New advanced features support
+  severity?: 'Low' | 'Medium' | 'High' | 'Critical';
+  severityExplanation?: string;
+  latitude?: number;
+  longitude?: number;
+  pledges?: HelpPledge[];
+  resolvedMediaUrl?: string;
+  resolvedNotes?: string;
+  resolvedBy?: string;
+  resolvedTimestamp?: string;
+  verificationsCount?: number;
+  verifiedUsers?: string[];
 }
 
 export interface CommunityLeaderboardItem {

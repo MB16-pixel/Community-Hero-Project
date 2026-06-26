@@ -63,25 +63,54 @@ app.post("/api/explain", async (req, res) => {
 
     const aiClient = getGenAI();
     
-    const systemPrompt = `You are a helpful assistant that rephrases short community-reported civic issues (like potholes, broken streetlights, or public littering) into clear, concise, and professional descriptions for city hazard logs.
-Given an issue description, rephrase it to be professional, descriptive, and polite (for example, rephrasing "very deep pothole" to "A deep and hazardous pothole on the road surface posing an immediate risk to vehicles and pedestrians").
-Do NOT write any introduction, commentary, or explanation. Do NOT add markdown headers or bullet points. Return ONLY the single rephrased sentence or short paragraph (maximum 20-25 words).`;
+    const systemPrompt = `You are an expert civic hazard analyst. Your job is to analyze a community-reported civic issue (like potholes, water leakage, or broken streetlights) and return a JSON object with:
+1. "rephrased": A highly professional, clear, and polite single-sentence or short paragraph rephrasing of the issue for city hazard logs (maximum 25 words).
+2. "severity": One of ["Low", "Medium", "High", "Critical"]. Assign based on immediate safety hazards, traffic flow disruption, water/resource waste, or infrastructure damage.
+3. "severityExplanation": A short, clear, 1-sentence explanation of why you selected this severity.
+4. "suggestedCategory": One of ["Pothole", "Waste Management", "Water Leakage", "Damaged Streetlight", "Other"]. Choose the best fit.
 
-    const userPrompt = `Issue Category: ${category || "General Community Issue"}
-Reported Description: "${description}"`;
+You MUST respond ONLY with a raw JSON object matching this schema, without markdown formatting or other comments.`;
+
+    const userPrompt = `Issue Category: ${category || "General Community Issue"}\nReported Description: "${description}"`;
 
     const response = await runWithRetry(() => 
       aiClient.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-3.5-flash",
         contents: userPrompt,
         config: {
           systemInstruction: systemPrompt,
-          temperature: 0.7,
+          temperature: 0.2,
+          responseMimeType: "application/json"
         },
       })
     );
 
-    res.json({ analysis: response.text });
+    const jsonText = response.text || "{}";
+    let parsed = {
+      rephrased: description,
+      severity: "Medium",
+      severityExplanation: "Assigned default severity.",
+      suggestedCategory: category || "Other"
+    };
+
+    try {
+      let cleaned = jsonText.trim();
+      if (cleaned.startsWith("```json")) {
+        cleaned = cleaned.replace(/^```json/, "").replace(/```$/, "").trim();
+      } else if (cleaned.startsWith("```")) {
+        cleaned = cleaned.replace(/^```/, "").replace(/```$/, "").trim();
+      }
+      parsed = JSON.parse(cleaned);
+    } catch (parseErr) {
+      console.error("Failed to parse Gemini JSON output, raw text was:", jsonText, parseErr);
+    }
+
+    res.json({ 
+      analysis: parsed.rephrased || description,
+      severity: parsed.severity || "Medium",
+      severityExplanation: parsed.severityExplanation || "Assigned standard severity classification.",
+      suggestedCategory: parsed.suggestedCategory || category || "Other"
+    });
   } catch (error: any) {
     console.error("Error in /api/explain:", error);
     
@@ -105,6 +134,81 @@ Reported Description: "${description}"`;
     }
 
     res.status(500).json({ error: userFriendlyMessage });
+  }
+});
+
+// API endpoint for semantic duplicate detection
+app.post("/api/detect-duplicates", async (req, res) => {
+  try {
+    const { description, address, category, existingIssues } = req.body;
+    if (!description || typeof description !== "string") {
+      return res.status(400).json({ error: "Description is required" });
+    }
+
+    if (!existingIssues || !Array.isArray(existingIssues) || existingIssues.length === 0) {
+      return res.json({ isDuplicate: false, duplicateOfId: null, explanation: null });
+    }
+
+    const aiClient = getGenAI();
+
+    const systemPrompt = `You are an expert civic system optimizer. Your job is to analyze a new community issue report and compare it to a list of existing issue reports to identify if it is a duplicate.
+An issue is a duplicate if it describes the same event, damage, or hazard at the exact same location/street or within extremely close proximity (e.g. "large pothole near pharmacy" is a duplicate of "pothole on Main Street near pharmacy").
+Return a JSON object with:
+1. "isDuplicate": true if the new report is a clear duplicate of one of the existing issues, false otherwise.
+2. "duplicateOfId": The issueId of the duplicated issue from the list, or null if isDuplicate is false.
+3. "explanation": A friendly, clear 1-sentence explanation of why it is a duplicate (pointing to similarities) or why it is unique.
+
+You MUST respond ONLY with a raw JSON object matching this schema, without markdown formatting or other comments.`;
+
+    const userPrompt = `New Issue to analyze:
+- Description: "${description}"
+- Address/Location: "${address || "Unknown"}"
+- Category: "${category || "Other"}"
+
+List of existing issue reports in the system:
+${JSON.stringify(existingIssues.map((issue: any) => ({
+  issueId: issue.issueId,
+  description: issue.description,
+  address: issue.address,
+  category: issue.category
+})), null, 2)}
+`;
+
+    const response = await runWithRetry(() => 
+      aiClient.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: userPrompt,
+        config: {
+          systemInstruction: systemPrompt,
+          temperature: 0.1,
+          responseMimeType: "application/json"
+        },
+      })
+    );
+
+    const jsonText = response.text || "{}";
+    let parsed = {
+      isDuplicate: false,
+      duplicateOfId: null as string | null,
+      explanation: null as string | null
+    };
+
+    try {
+      let cleaned = jsonText.trim();
+      if (cleaned.startsWith("```json")) {
+        cleaned = cleaned.replace(/^```json/, "").replace(/```$/, "").trim();
+      } else if (cleaned.startsWith("```")) {
+        cleaned = cleaned.replace(/^```/, "").replace(/```$/, "").trim();
+      }
+      parsed = JSON.parse(cleaned);
+    } catch (parseErr) {
+      console.error("Failed to parse duplicates JSON:", jsonText, parseErr);
+    }
+
+    res.json(parsed);
+  } catch (error: any) {
+    console.error("Error in /api/detect-duplicates:", error);
+    res.status(500).json({ error: error?.message || "Failed to analyze duplicates" });
   }
 });
 

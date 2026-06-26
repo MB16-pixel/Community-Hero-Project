@@ -1,31 +1,84 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { db, handleFirestoreError, OperationType } from '../firebaseConfig';
-import { collection, onSnapshot, doc, updateDoc, writeBatch } from 'firebase/firestore';
-import { IssueReport } from '../types';
+import { collection, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { IssueReport, HelpPledge } from '../types';
+import { audio } from '../utils/audio';
 import { 
-  Filter, 
   MapPin, 
   Clock, 
-  Tag, 
   CheckCircle, 
   AlertCircle, 
   Check, 
   User as UserIcon,
   HelpCircle,
-  Database,
   ThumbsUp,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Sparkles,
+  ShieldAlert,
+  Heart,
+  Undo2,
+  Send,
+  Camera
 } from 'lucide-react';
 
 export const IssuesFeedScreen: React.FC = () => {
-  const { user } = useAuth();
+  const { user, gainXP } = useAuth();
   const [issues, setIssues] = useState<IssueReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   
-  // Filters: 'all' | 'my_issues' | 'nearby' (same community district)
+  // Filters: 'all' | 'my_issues' | 'nearby'
   const [activeFilter, setActiveFilter] = useState<'all' | 'my_issues' | 'nearby'>('all');
+
+  // Pledge support states
+  const [activePledgeIssueId, setActivePledgeIssueId] = useState<string | null>(null);
+  const [pledgeType, setPledgeType] = useState<'labor' | 'material' | 'financial' | 'advocacy'>('labor');
+  const [pledgeNote, setPledgeNote] = useState<string>('');
+
+  // Resolution Form states
+  const [activeResolveIssueId, setActiveResolveIssueId] = useState<string | null>(null);
+  const [resolveNotes, setResolveNotes] = useState<string>('');
+  
+  // High quality Unsplash stock images for community work resolution presets
+  const resolutionPresets = [
+    {
+      id: 'road',
+      name: 'Asphalt Repaired',
+      url: 'https://images.unsplash.com/photo-1544982503-9f984c14501a?auto=format&fit=crop&w=800&q=80'
+    },
+    {
+      id: 'water',
+      name: 'Fixed Pipe/Faucet',
+      url: 'https://images.unsplash.com/photo-1581244277943-fe4a9c777189?auto=format&fit=crop&w=800&q=80'
+    },
+    {
+      id: 'street',
+      name: 'Clean Environment',
+      url: 'https://images.unsplash.com/photo-1530587191325-3db32d826c18?auto=format&fit=crop&w=800&q=80'
+    },
+    {
+      id: 'light',
+      name: 'Bright Streetlight',
+      url: 'https://images.unsplash.com/photo-1517420812313-8fc54b172b1d?auto=format&fit=crop&w=800&q=80'
+    }
+  ];
+  const [selectedResolveImage, setSelectedResolveImage] = useState<string>(resolutionPresets[0].url);
+
+  // Success toast notification
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+    if (type === 'success') {
+      audio.playSuccess();
+    } else {
+      audio.playTick();
+    }
+    setTimeout(() => {
+      setToast(null);
+    }, 4500);
+  };
 
   // Real-time listener for Firestore issues
   useEffect(() => {
@@ -56,87 +109,169 @@ export const IssuesFeedScreen: React.FC = () => {
     return () => unsubscribe();
   }, [user]);
 
-  // Handle status update (e.g. Verify or Resolve)
+  // Handle manual status override (for back-office simulator admin bar)
   const handleUpdateStatus = async (issueId: string, newStatus: 'Pending' | 'Verified' | 'Resolved') => {
+    audio.playClick();
     const path = `issues/${issueId}`;
     try {
       const issueRef = doc(db, 'issues', issueId);
-      await updateDoc(issueRef, { status: newStatus });
+      if (newStatus === 'Resolved') {
+        // Preset sample resolution fields
+        await updateDoc(issueRef, { 
+          status: 'Resolved',
+          resolvedNotes: "Issue resolved successfully by the neighborhood committee.",
+          resolvedMediaUrl: "https://images.unsplash.com/photo-1544982503-9f984c14501a?auto=format&fit=crop&w=800&q=80",
+          resolvedBy: user?.username || "Community Action Team",
+          resolvedTimestamp: new Date().toISOString()
+        });
+      } else {
+        await updateDoc(issueRef, { 
+          status: newStatus,
+          resolvedNotes: null,
+          resolvedMediaUrl: null,
+          resolvedBy: null,
+          resolvedTimestamp: null
+        });
+      }
+      showToast(`Status updated to ${newStatus}!`, "success");
     } catch (err: any) {
       const wrappedError = handleFirestoreError(err, OperationType.UPDATE, path, user?.uid, user?.email);
-      alert("Permission denied or failed to update issue status.");
+      showToast("Failed to update status: " + (err.message || String(err)), "error");
       console.error(wrappedError);
     }
   };
 
-  // Seeding realistic mock issues to populate the Firestore database on demand
-  const seedDemoData = async () => {
-    setLoading(true);
-    try {
-      const batch = writeBatch(db);
-      
-      const sampleIssues: IssueReport[] = [
-        {
-          issueId: "issue_seed_1",
-          userId: "user_seed_99",
-          reporterName: "Jane Doe",
-          description: "Massive pothole on Main Street in front of the local pharmacy. Cars are swerving to avoid it, creating unsafe traffic flows.",
-          address: "420 Main Street, Green Valley",
-          mediaUrl: "https://images.unsplash.com/photo-1515162305285-0293e4767cc2?auto=format&fit=crop&w=500&q=80",
-          category: "Pothole",
-          status: "Pending",
-          timestamp: new Date(Date.now() - 3600000 * 2).toISOString() // 2 hrs ago
-        },
-        {
-          issueId: "issue_seed_2",
-          userId: "user_seed_98",
-          reporterName: "Tom Jenkins",
-          description: "Water hydrant has a small crack and is continuously leaking water into the gutter. Wasting precious gallons of clean drinking water.",
-          address: "700 Waterway Lane, South Shore",
-          mediaUrl: "https://images.unsplash.com/photo-1542013936693-8848157b13df?auto=format&fit=crop&w=500&q=80",
-          category: "Water Leakage",
-          status: "Verified",
-          timestamp: new Date(Date.now() - 3600000 * 5).toISOString() // 5 hrs ago
-        },
-        {
-          issueId: "issue_seed_3",
-          userId: "user_seed_97",
-          reporterName: "Marcus Vance",
-          description: "Streetlight is completely out in this block. The sidewalk is extremely dark and dangerous for evening walkers.",
-          address: "12 Pine Street, Metro Core",
-          mediaUrl: "https://images.unsplash.com/photo-1509021436665-8f37bc706572?auto=format&fit=crop&w=500&q=80",
-          category: "Damaged Streetlight",
-          status: "Resolved",
-          timestamp: new Date(Date.now() - 3600000 * 24).toISOString() // 1 day ago
-        }
-      ];
+  // citizen-led Issue Verification (+10 XP)
+  const handleVerifyIssue = async (issue: IssueReport) => {
+    if (!user) return;
+    audio.playClick();
 
-      sampleIssues.forEach((issue) => {
-        const ref = doc(db, 'issues', issue.issueId);
-        batch.set(ref, issue);
+    const verifiedUsersList = issue.verifiedUsers || [];
+    if (verifiedUsersList.includes(user.uid)) {
+      showToast("You have already verified this report!", "error");
+      return;
+    }
+
+    const path = `issues/${issue.issueId}`;
+    const newVerifiedUsers = [...verifiedUsersList, user.uid];
+    const newCount = (issue.verificationsCount || 0) + 1;
+    
+    // Auto promote to 'Verified' status if reaches 3 verifications
+    const shouldPromote = newCount >= 3 && issue.status === 'Pending';
+    const newStatus = shouldPromote ? 'Verified' : issue.status;
+
+    try {
+      const issueRef = doc(db, 'issues', issue.issueId);
+      await updateDoc(issueRef, {
+        verificationsCount: newCount,
+        verifiedUsers: newVerifiedUsers,
+        status: newStatus
       });
 
-      await batch.commit();
+      await gainXP(15);
+      showToast(`Verification submitted! You earned +15 XP. ${shouldPromote ? "Issue promoted to Verified!" : ""}`, "success");
     } catch (err: any) {
-      console.error("Failed to seed database:", err);
-    } finally {
-      setLoading(false);
+      const wrappedError = handleFirestoreError(err, OperationType.UPDATE, path, user.uid, user.email);
+      showToast("Verification failed: " + (err.message || String(err)), "error");
+      console.error(wrappedError);
+    }
+  };
+
+  // Submit Pledge Support (+20 XP)
+  const handleCommitPledge = async (issue: IssueReport) => {
+    if (!user) return;
+    if (issue.userId === user.uid) {
+      showToast("You cannot pledge support on your own report.", "error");
+      return;
+    }
+    if (!pledgeNote.trim()) {
+      showToast("Please write a quick comment explaining your support.", "error");
+      return;
+    }
+
+    audio.playClick();
+    const path = `issues/${issue.issueId}`;
+
+    const newPledge: HelpPledge = {
+      pledgeId: 'pledge_' + Math.random().toString(36).substring(2, 11),
+      userId: user.uid,
+      username: user.username,
+      type: pledgeType,
+      notes: pledgeNote.trim(),
+      timestamp: new Date().toISOString()
+    };
+
+    const currentPledges = issue.pledges || [];
+    const updatedPledges = [...currentPledges, newPledge];
+
+    try {
+      const issueRef = doc(db, 'issues', issue.issueId);
+      await updateDoc(issueRef, {
+        pledges: updatedPledges
+      });
+
+      await gainXP(25);
+      showToast(`Pledge Registered! You earned +25 XP. Thank you!`, "success");
+      
+      // Reset state
+      setActivePledgeIssueId(null);
+      setPledgeNote('');
+    } catch (err: any) {
+      const wrappedError = handleFirestoreError(err, OperationType.UPDATE, path, user.uid, user.email);
+      showToast("Failed to record pledge. Please try again.", "error");
+      console.error(wrappedError);
+    }
+  };
+
+  // Submit Resolution Details (+50 XP)
+  const handleResolveIssueSubmit = async (issue: IssueReport) => {
+    if (!user) return;
+    if (!resolveNotes.trim()) {
+      showToast("Please provide resolution notes describing how it was fixed.", "error");
+      return;
+    }
+
+    audio.playClick();
+    const path = `issues/${issue.issueId}`;
+
+    try {
+      const issueRef = doc(db, 'issues', issue.issueId);
+      await updateDoc(issueRef, {
+        status: 'Resolved',
+        resolvedNotes: resolveNotes.trim(),
+        resolvedMediaUrl: selectedResolveImage,
+        resolvedBy: user.username,
+        resolvedTimestamp: new Date().toISOString()
+      });
+
+      await gainXP(50);
+      showToast(`Resolution verified! You resolved this issue and earned +50 XP. Awesome!`, "success");
+
+      // Reset state
+      setActiveResolveIssueId(null);
+      setResolveNotes('');
+    } catch (err: any) {
+      const wrappedError = handleFirestoreError(err, OperationType.UPDATE, path, user.uid, user.email);
+      showToast("Failed to record resolution.", "error");
+      console.error(wrappedError);
     }
   };
 
   // Filter client-side logic
   const filteredIssues = issues.filter(issue => {
+    // 1. Tab filtering
     if (activeFilter === 'my_issues') {
-      return issue.userId === user?.uid;
+      if (issue.userId !== user?.uid) return false;
     }
     if (activeFilter === 'nearby') {
-      // Find issues belonging to the user's country
       const userComm = user?.community || "United States";
       const countryNameOnly = userComm.replace(/[^\w\s]/g, '').trim();
-      return issue.address.toLowerCase().includes(countryNameOnly.toLowerCase()) || 
-             issue.address.toLowerCase().includes(userComm.toLowerCase());
+      const inCommunity = issue.address.toLowerCase().includes(countryNameOnly.toLowerCase()) || 
+                          issue.address.toLowerCase().includes(userComm.toLowerCase());
+      if (!inCommunity) return false;
     }
-    return true; // 'all'
+
+    return true;
   });
 
   const getStatusBadge = (status: 'Pending' | 'Verified' | 'Resolved') => {
@@ -180,54 +315,90 @@ export const IssuesFeedScreen: React.FC = () => {
     }
   };
 
+  const getSeverityBadge = (level?: 'Low' | 'Medium' | 'High' | 'Critical') => {
+    if (!level) return null;
+    switch (level) {
+      case 'Low':
+        return <span className="text-[10px] bg-slate-100 border border-slate-200 text-slate-700 px-2 py-0.5 rounded-md font-bold uppercase">Minor</span>;
+      case 'Medium':
+        return <span className="text-[10px] bg-yellow-100 border border-yellow-200 text-yellow-800 px-2 py-0.5 rounded-md font-bold uppercase">Medium</span>;
+      case 'High':
+        return <span className="text-[10px] bg-orange-100 border border-orange-200 text-orange-800 px-2 py-0.5 rounded-md font-bold uppercase">High Risk</span>;
+      case 'Critical':
+        return <span className="text-[10px] bg-red-100 border border-red-200 text-red-800 px-2 py-0.5 rounded-md font-bold uppercase animate-pulse">Critical Danger</span>;
+    }
+  };
+
   return (
     <div className="flex flex-col h-full bg-[#F9F7F2] overflow-y-auto">
       {/* Top Banner */}
-      <div className="bg-[#F4EFE6] text-[#3D3D3D] px-6 py-5 rounded-b-[2.5rem] shadow-sm border-b border-[#E5E0D5]">
-        <h1 className="text-2xl font-serif font-bold text-[#2C362E] tracking-tight">Community Feed</h1>
-        <p className="text-xs text-[#7A7A7A] mt-1 font-medium">Real-time alerts filed by your neighbors</p>
+      <div className="bg-[#F4EFE6] text-[#3D3D3D] px-6 py-5 rounded-b-[2.5rem] shadow-sm border-b border-[#E5E0D5] relative overflow-hidden">
+        <div className="relative z-10">
+          <h1 className="text-2xl font-serif font-bold text-[#2C362E] tracking-tight">Community Feed</h1>
+          <p className="text-xs text-[#7A7A7A] mt-1 font-medium">Real-time alerts filed by your neighbors</p>
+        </div>
+        <div className="absolute right-4 bottom-2 opacity-10">
+          <SlidersHorizontal className="w-24 h-24 text-stone-900" />
+        </div>
       </div>
 
-      {/* Filter Chips */}
-      <div className="px-6 mt-5">
-        <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#7A7A7A] uppercase tracking-wider mb-2.5">
-          <SlidersHorizontal className="w-3.5 h-3.5 text-[#5A6B5D]" />
-          <span>Filter Issues</span>
+      {/* Toast Alert Popup */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 max-w-sm animate-bounce shadow-xl">
+          <div className={`p-4 rounded-2xl flex items-center gap-3 border ${
+            toast.type === 'success' 
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
+              : 'bg-rose-50 border-rose-200 text-rose-800'
+          }`}>
+            <CheckCircle className="w-5 h-5 shrink-0" />
+            <p className="font-bold text-xs leading-normal">{toast.message}</p>
+          </div>
         </div>
-        <div className="flex gap-2 pb-1 overflow-x-auto">
-          <button
-            onClick={() => setActiveFilter('all')}
-            className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${
-              activeFilter === 'all'
-                ? 'bg-[#5A6B5D] text-white border-[#5A6B5D] shadow-sm'
-                : 'bg-white text-[#708271] border-[#EDE9E0] hover:bg-[#F4EFE6]'
-            }`}
-          >
-            All Issues ({issues.length})
-          </button>
-          <button
-            onClick={() => setActiveFilter('my_issues')}
-            className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${
-              activeFilter === 'my_issues'
-                ? 'bg-[#5A6B5D] text-white border-[#5A6B5D] shadow-sm'
-                : 'bg-white text-[#708271] border-[#EDE9E0] hover:bg-[#F4EFE6]'
-            }`}
-          >
-            My Reports ({issues.filter(i => i.userId === user?.uid).length})
-          </button>
-          <button
-            onClick={() => setActiveFilter('nearby')}
-            className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${
-              activeFilter === 'nearby'
-                ? 'bg-[#5A6B5D] text-white border-[#5A6B5D] shadow-sm'
-                : 'bg-white text-[#708271] border-[#EDE9E0] hover:bg-[#F4EFE6]'
-            }`}
-          >
-            {user?.community || "🇺🇸 United States"} ({issues.filter(i => {
-              const countryName = (user?.community || "United States").replace(/[^\w\s]/g, '').trim();
-              return i.address.toLowerCase().includes(countryName.toLowerCase());
-            }).length})
-          </button>
+      )}
+
+      {/* Filter Options */}
+      <div className="px-6 mt-5 space-y-4">
+        {/* Tab Selection */}
+        <div>
+          <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#7A7A7A] uppercase tracking-wider mb-2.5">
+            <SlidersHorizontal className="w-3.5 h-3.5 text-[#5A6B5D]" />
+            <span>Scope Filter</span>
+          </div>
+          <div className="flex gap-2 pb-1 overflow-x-auto">
+            <button
+              onClick={() => { audio.playClick(); setActiveFilter('all'); }}
+              className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${
+                activeFilter === 'all'
+                  ? 'bg-[#5A6B5D] text-white border-[#5A6B5D] shadow-sm'
+                  : 'bg-white text-[#708271] border-[#EDE9E0] hover:bg-[#F4EFE6]'
+              }`}
+            >
+              All Issues ({issues.length})
+            </button>
+            <button
+              onClick={() => { audio.playClick(); setActiveFilter('my_issues'); }}
+              className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${
+                activeFilter === 'my_issues'
+                  ? 'bg-[#5A6B5D] text-white border-[#5A6B5D] shadow-sm'
+                  : 'bg-white text-[#708271] border-[#EDE9E0] hover:bg-[#F4EFE6]'
+              }`}
+            >
+              My Reports ({issues.filter(i => i.userId === user?.uid).length})
+            </button>
+            <button
+              onClick={() => { audio.playClick(); setActiveFilter('nearby'); }}
+              className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${
+                activeFilter === 'nearby'
+                  ? 'bg-[#5A6B5D] text-white border-[#5A6B5D] shadow-sm'
+                  : 'bg-white text-[#708271] border-[#EDE9E0] hover:bg-[#F4EFE6]'
+              }`}
+            >
+              {user?.community || "🇺🇸 United States"} ({issues.filter(i => {
+                const countryName = (user?.community || "United States").replace(/[^\w\s]/g, '').trim();
+                return i.address.toLowerCase().includes(countryName.toLowerCase());
+              }).length})
+            </button>
+          </div>
         </div>
       </div>
 
@@ -249,117 +420,350 @@ export const IssuesFeedScreen: React.FC = () => {
             <div className="inline-flex p-4 bg-[#F0F5F1] rounded-2xl text-[#5A6B5D] mb-4">
               <HelpCircle className="w-8 h-8" />
             </div>
-            <h3 className="font-serif font-bold text-[#2C362E] text-base">No Issues Found</h3>
+            <h3 className="font-serif font-bold text-[#2C362E] text-base">No Matching Reports</h3>
             <p className="text-xs text-[#7A7A7A] mt-2 max-w-xs mx-auto">
               {activeFilter === 'my_issues' 
                 ? "You haven't reported any issues yet. Click the 'Report' tab to start earning XP!" 
-                : activeFilter === 'nearby' 
-                ? `No issues logged in ${user?.community || "United States"} yet. Be the first hero to log one!`
-                : "The active database is currently empty of community reports."}
+                : "No reports found in the current filter scope."}
             </p>
-
-            {/* Quick-Seed Button for Empty Databases */}
-            {issues.length === 0 && (
-              <button
-                onClick={seedDemoData}
-                className="mt-6 inline-flex items-center gap-2 px-4 py-2.5 bg-[#F4EFE6] border border-[#EDE9E0] text-[#5A6B5D] rounded-xl text-xs font-bold hover:bg-[#EAE4D8] transition-colors"
-              >
-                <Database className="w-4 h-4" />
-                Seed Demo Issues
-              </button>
-            )}
           </div>
         ) : (
-          <div className="space-y-4">
-            {filteredIssues.map((issue) => (
-              <div 
-                key={issue.issueId}
-                className="bg-white rounded-[32px] overflow-hidden border border-[#EDE9E0] shadow-sm hover:shadow-md transition-all flex flex-col"
-              >
-                {/* Media Image */}
-                <div className="w-full h-44 relative bg-[#FBF9F6]">
-                  <img 
-                    src={issue.mediaUrl} 
-                    alt={issue.description} 
-                    className="w-full h-full object-cover"
-                    referrerPolicy="no-referrer"
-                  />
-                  
-                  {/* Category Tag overlay */}
-                  <span className={`absolute top-3 left-3 px-3 py-1 rounded-full text-[10px] font-bold border uppercase tracking-wider backdrop-blur-md shadow-sm ${getCategoryColor(issue.category)}`}>
-                    {issue.category}
-                  </span>
+          <div className="space-y-6">
+            {filteredIssues.map((issue) => {
+              const hasVerified = issue.verifiedUsers?.includes(user?.uid || '');
 
-                  {/* Status Overlay */}
-                  <div className="absolute top-3 right-3 shadow-sm">
-                    {getStatusBadge(issue.status)}
-                  </div>
-                </div>
-
-                {/* Content */}
-                <div className="p-5 flex-1 flex flex-col justify-between">
-                  <div>
-                    {/* Location */}
-                    <div className="flex items-start gap-1.5 text-[#7A7A7A] text-xs mb-2">
-                      <MapPin className="w-3.5 h-3.5 text-[#D9835D] shrink-0 mt-0.5" />
-                      <span className="font-medium line-clamp-1">{issue.address}</span>
-                    </div>
-
-                    {/* Description */}
-                    <p className="text-[#3D3D3D] text-sm font-medium leading-relaxed mb-3">
-                      {issue.description}
-                    </p>
-                  </div>
-
-                  {/* Footer Stats & Interactions */}
-                  <div className="border-t border-[#EDE9E0] pt-3 mt-2 flex flex-col gap-2">
-                    <div className="flex justify-between items-center text-[11px] text-[#7A7A7A]">
-                      <div className="flex items-center gap-1">
-                        <UserIcon className="w-3 h-3 text-[#5A6B5D]" />
-                        <span className="font-semibold">By: {issue.reporterName || "Anonymous"}</span>
+              return (
+                <div 
+                  key={issue.issueId}
+                  className="bg-white rounded-[32px] overflow-hidden border border-[#EDE9E0] shadow-sm hover:shadow-md transition-all flex flex-col"
+                >
+                  {/* Before/After visual split (Feature 5) */}
+                  {issue.status === 'Resolved' && issue.resolvedMediaUrl ? (
+                    <div className="grid grid-cols-2 h-44 border-b border-[#EDE9E0] relative">
+                      {/* Before frame */}
+                      <div className="relative h-full overflow-hidden bg-stone-100 group">
+                        <img 
+                          src={issue.mediaUrl} 
+                          alt="Before Community Action" 
+                          className="w-full h-full object-cover grayscale brightness-90 group-hover:grayscale-0 transition-all duration-300"
+                        />
+                        <span className="absolute top-3 left-3 bg-red-600/90 text-white font-bold text-[8px] uppercase px-1.5 py-0.5 rounded tracking-widest shadow-sm">
+                          Before
+                        </span>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-[#7A7A7A]" />
-                        <span>{new Date(issue.timestamp).toLocaleDateString()}</span>
+                      
+                      {/* After frame */}
+                      <div className="relative h-full overflow-hidden bg-stone-200 group">
+                        <img 
+                          src={issue.resolvedMediaUrl} 
+                          alt="After Community Action" 
+                          className="w-full h-full object-cover group-hover:scale-105 transition-all duration-300"
+                        />
+                        <span className="absolute top-3 right-3 bg-emerald-600/90 text-white font-bold text-[8px] uppercase px-1.5 py-0.5 rounded tracking-widest shadow-sm flex items-center gap-0.5 animate-pulse">
+                          <Check className="w-2.5 h-2.5" /> Fixed
+                        </span>
                       </div>
-                    </div>
 
-                    {/* INTERACTIVE SIMULATOR ADMIN BAR */}
-                    <div className="flex items-center justify-between bg-[#FBF9F6] p-2 rounded-xl mt-1.5 border border-[#EDE9E0]">
-                      <span className="text-[10px] font-bold text-[#708271] uppercase tracking-wide">
-                        Simulate Validation
+                      {/* Overlaid Category Tag */}
+                      <span className="absolute bottom-3 left-3 px-3 py-1 rounded-full text-[10px] font-bold border uppercase tracking-wider backdrop-blur-md shadow-sm bg-white/95 text-stone-800 border-stone-200">
+                        {issue.category}
                       </span>
-                      <div className="flex gap-1.5">
-                        {issue.status !== 'Verified' && (
+                    </div>
+                  ) : (
+                    /* Standard Pending/Verified visual image */
+                    <div className="w-full h-44 relative bg-[#FBF9F6]">
+                      <img 
+                        src={issue.mediaUrl} 
+                        alt={issue.description} 
+                        className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                      
+                      {/* Category Tag overlay */}
+                      <span className={`absolute top-3 left-3 px-3 py-1 rounded-full text-[10px] font-bold border uppercase tracking-wider backdrop-blur-md shadow-sm ${getCategoryColor(issue.category)}`}>
+                        {issue.category}
+                      </span>
+
+                      {/* Status Overlay */}
+                      <div className="absolute top-3 right-3 shadow-sm">
+                        {getStatusBadge(issue.status)}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Content Panel */}
+                  <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between gap-1.5">
+                        {/* Location */}
+                        <div className="flex items-center gap-1.5 text-[#7A7A7A] text-xs">
+                          <MapPin className="w-3.5 h-3.5 text-[#D9835D] shrink-0" />
+                          <span className="font-semibold line-clamp-1">{issue.address}</span>
+                        </div>
+
+                        {/* Severity Level (Feature 1) */}
+                        {getSeverityBadge(issue.severity)}
+                      </div>
+
+                      {/* Description */}
+                      <p className="text-[#3D3D3D] text-sm font-medium leading-relaxed">
+                        {issue.description}
+                      </p>
+
+                      {/* AI Severity explanation contextual bubble (Feature 1) */}
+                      {issue.severityExplanation && (
+                        <div className="bg-[#FBF9F6] border border-[#EDE9E0] p-2.5 rounded-xl text-[10px] text-stone-500 italic">
+                          <strong>Gemini diagnosis:</strong> {issue.severityExplanation}
+                        </div>
+                      )}
+
+                      {/* Resolution notes box (Feature 5) */}
+                      {issue.status === 'Resolved' && issue.resolvedNotes && (
+                        <div className="bg-emerald-50/50 border border-emerald-100 p-3.5 rounded-2xl text-xs space-y-1.5">
+                          <div className="flex items-center gap-1.5 text-emerald-800 font-bold uppercase tracking-wider text-[9px]">
+                            <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Neighborhood Resolution Report</span>
+                          </div>
+                          <p className="text-stone-700 italic">
+                            "{issue.resolvedNotes}"
+                          </p>
+                          <div className="text-[10px] text-stone-400 font-bold">
+                            Resolved by {issue.resolvedBy} on {new Date(issue.resolvedTimestamp!).toLocaleDateString()}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Community Help Pledges list (Feature 4) */}
+                    <div className="space-y-2 pt-2 border-t border-stone-100">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[9px] uppercase tracking-wider font-extrabold text-[#7A7A7A]">
+                          Volunteer Pledges ({issue.pledges?.length || 0})
+                        </span>
+                        
+                        {issue.status !== 'Resolved' && issue.userId !== user?.uid && (
                           <button
-                            onClick={() => handleUpdateStatus(issue.issueId, 'Verified')}
-                            className="bg-[#708271] hover:bg-[#5A6B5D] text-white font-bold text-[9px] uppercase px-2 py-1 rounded-lg transition-colors flex items-center gap-0.5"
+                            type="button"
+                            onClick={() => {
+                              audio.playClick();
+                              setActivePledgeIssueId(activePledgeIssueId === issue.issueId ? null : issue.issueId);
+                            }}
+                            className="text-[10px] text-[#5A6B5D] hover:text-[#455247] font-bold flex items-center gap-0.5 cursor-pointer"
                           >
-                            <Check className="w-2.5 h-2.5" /> Verify
+                            <Heart className="w-3 h-3 text-[#D9835D] fill-[#D9835D]" />
+                            {activePledgeIssueId === issue.issueId ? 'Cancel Pledge' : 'Pledge Support'}
                           </button>
                         )}
+
+                        {issue.status !== 'Resolved' && issue.userId === user?.uid && (
+                          <span className="text-[10px] text-stone-400 font-medium">
+                            My Report
+                          </span>
+                        )}
+                      </div>
+
+                      {issue.pledges && issue.pledges.length > 0 ? (
+                        <div className="space-y-1.5 max-h-24 overflow-y-auto scrollbar-none pr-1">
+                          {issue.pledges.map((pledge) => (
+                            <div key={pledge.pledgeId} className="bg-stone-50 p-2 rounded-xl text-[10px] text-stone-600 flex items-start gap-1.5 border border-stone-100">
+                              <span className="bg-[#F4EFE6] text-[#708271] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider text-[7.5px] shrink-0 mt-0.5">
+                                {pledge.type}
+                              </span>
+                              <div className="leading-tight">
+                                <span className="font-bold text-stone-800">{pledge.username}:</span> {pledge.notes}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-[10px] text-stone-400 italic">No community pledges pledged yet. Offer your help to coordinate fixes!</p>
+                      )}
+
+                      {/* Expandable pledge form (Feature 4) */}
+                      {activePledgeIssueId === issue.issueId && (
+                        <div className="bg-[#FBF9F6] border border-[#E5E0D5] p-3 rounded-2xl space-y-2.5 animate-fadeIn">
+                          <p className="text-[10px] font-bold uppercase text-stone-700">Commit Support Offer</p>
+                          
+                          <div className="grid grid-cols-4 gap-1">
+                            {[
+                              { id: 'labor', label: 'Labor' },
+                              { id: 'material', label: 'Materials' },
+                              { id: 'financial', label: 'Financial' },
+                              { id: 'advocacy', label: 'Advocacy' }
+                            ].map((btn) => (
+                              <button
+                                key={btn.id}
+                                type="button"
+                                onClick={() => { audio.playSelect(); setPledgeType(btn.id as any); }}
+                                className={`py-1 text-[9px] font-bold rounded-lg border transition-colors ${
+                                  pledgeType === btn.id 
+                                    ? 'bg-[#5A6B5D] text-white border-[#5A6B5D]' 
+                                    : 'bg-white text-stone-600 border-stone-200'
+                                }`}
+                              >
+                                {btn.label}
+                              </button>
+                            ))}
+                          </div>
+
+                          <div className="flex gap-1.5">
+                            <input
+                              type="text"
+                              placeholder="e.g. I have a ladder and can help on Saturday..."
+                              value={pledgeNote}
+                              onChange={(e) => setPledgeNote(e.target.value)}
+                              className="flex-1 px-2.5 py-1.5 bg-white border border-[#E5E0D5] rounded-xl text-[11px] focus:outline-none"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleCommitPledge(issue)}
+                              className="px-3 bg-[#5A6B5D] hover:bg-[#455247] text-white rounded-xl flex items-center justify-center cursor-pointer"
+                            >
+                              <Send className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Expandable Resolution Form (Feature 5) */}
+                    {activeResolveIssueId === issue.issueId && (
+                      <div className="bg-emerald-50/40 border border-emerald-100 p-3.5 rounded-2xl space-y-3 animate-fadeIn">
+                        <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-emerald-800">
+                          <Camera className="w-3.5 h-3.5" />
+                          <span>Report Resolution Fix</span>
+                        </div>
+
+                        {/* Presets images */}
+                        <div className="space-y-1">
+                          <label className="block text-[8px] uppercase tracking-wider font-bold text-stone-500">
+                            Select Resolution Photo Evidence
+                          </label>
+                          <div className="grid grid-cols-4 gap-1.5">
+                            {resolutionPresets.map((pr) => (
+                              <button
+                                key={pr.id}
+                                type="button"
+                                onClick={() => setSelectedResolveImage(pr.url)}
+                                className={`relative h-10 rounded-lg overflow-hidden border-2 ${
+                                  selectedResolveImage === pr.url ? 'border-emerald-600' : 'border-transparent'
+                                }`}
+                              >
+                                <img src={pr.url} alt={pr.name} className="w-full h-full object-cover" />
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* resolution note input */}
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            placeholder="Describe how the community fixed this issue..."
+                            value={resolveNotes}
+                            onChange={(e) => setResolveNotes(e.target.value)}
+                            className="flex-1 px-3 py-2 bg-white border border-[#EDE9E0] rounded-xl text-xs focus:outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleResolveIssueSubmit(issue)}
+                            className="px-4 bg-[#5A6B5D] hover:bg-[#455247] text-white rounded-xl text-xs font-bold shrink-0 cursor-pointer"
+                          >
+                            Resolve
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Footer Stats & Interactions */}
+                    <div className="border-t border-[#EDE9E0] pt-3 flex flex-col gap-2.5">
+                      <div className="flex justify-between items-center text-[10px] text-[#7A7A7A]">
+                        <div className="flex items-center gap-1">
+                          <UserIcon className="w-3.5 h-3.5 text-[#5A6B5D]" />
+                          <span className="font-bold">By: {issue.reporterName || "Anonymous"}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Clock className="w-3.5 h-3.5 text-[#7A7A7A]" />
+                          <span>{new Date(issue.timestamp).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+
+                      {/* MAIN ACTION INTERACTION BAR */}
+                      <div className="flex gap-2">
+                        {/* Verify Button (Feature 5) */}
                         {issue.status !== 'Resolved' && (
                           <button
-                            onClick={() => handleUpdateStatus(issue.issueId, 'Resolved')}
-                            className="bg-[#5A6B5D] hover:bg-[#4A594D] text-white font-bold text-[9px] uppercase px-2 py-1 rounded-lg transition-colors flex items-center gap-0.5"
+                            onClick={() => handleVerifyIssue(issue)}
+                            disabled={hasVerified}
+                            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[10.5px] font-bold border transition-colors cursor-pointer ${
+                              hasVerified 
+                                ? 'bg-stone-50 border-stone-200 text-stone-400 cursor-not-allowed' 
+                                : 'bg-white hover:bg-stone-50 border-[#EDE9E0] text-stone-700'
+                            }`}
                           >
-                            <Check className="w-2.5 h-2.5" /> Resolve
+                            <CheckCircle className={`w-3.5 h-3.5 ${hasVerified ? 'text-stone-300' : 'text-emerald-600'}`} />
+                            <span>
+                              {hasVerified ? 'Verified by You' : 'Verify Report'} ({(issue.verificationsCount || 0)})
+                            </span>
                           </button>
                         )}
-                        {issue.status !== 'Pending' && (
+
+                        {/* Resolve Trigger Button (Feature 5) */}
+                        {issue.status !== 'Resolved' && (
                           <button
-                            onClick={() => handleUpdateStatus(issue.issueId, 'Pending')}
-                            className="bg-[#EAE4D8] hover:bg-[#DCD6C8] text-[#3D3D3D] font-bold text-[9px] uppercase px-1.5 py-1 rounded-lg transition-colors"
+                            onClick={() => {
+                              audio.playClick();
+                              setActiveResolveIssueId(activeResolveIssueId === issue.issueId ? null : issue.issueId);
+                            }}
+                            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[10.5px] font-bold border transition-colors cursor-pointer ${
+                              activeResolveIssueId === issue.issueId
+                                ? 'bg-amber-50 border-amber-200 text-amber-800'
+                                : 'bg-[#5A6B5D] hover:bg-[#455247] text-white border-[#5A6B5D]'
+                            }`}
                           >
-                            Re-Open
+                            <Sparkles className="w-3.5 h-3.5 text-white/90" />
+                            <span>{activeResolveIssueId === issue.issueId ? 'Cancel Fix' : 'Mark as Fixed'}</span>
                           </button>
                         )}
+                      </div>
+
+                      {/* INTERACTIVE SIMULATOR BACK-OFFICE ADMIN BAR */}
+                      <div className="flex items-center justify-between bg-[#FBF9F6] p-2 rounded-xl mt-1 border border-[#EDE9E0]">
+                        <span className="text-[8.5px] font-black text-[#7A7A7A] uppercase tracking-wider">
+                          Simulation Override Controls
+                        </span>
+                        <div className="flex gap-1.5">
+                          {issue.status !== 'Verified' && (
+                            <button
+                              onClick={() => handleUpdateStatus(issue.issueId, 'Verified')}
+                              className="bg-[#708271] hover:bg-[#5A6B5D] text-white font-bold text-[8px] uppercase px-2 py-1 rounded-lg transition-colors"
+                            >
+                              Verify
+                            </button>
+                          )}
+                          {issue.status !== 'Resolved' && (
+                            <button
+                              onClick={() => handleUpdateStatus(issue.issueId, 'Resolved')}
+                              className="bg-[#5A6B5D] hover:bg-[#4A594D] text-white font-bold text-[8px] uppercase px-2 py-1 rounded-lg transition-colors"
+                            >
+                              Resolve
+                            </button>
+                          )}
+                          {issue.status !== 'Pending' && (
+                            <button
+                              onClick={() => handleUpdateStatus(issue.issueId, 'Pending')}
+                              className="bg-[#EAE4D8] hover:bg-[#DCD6C8] text-[#3D3D3D] font-bold text-[8px] uppercase px-1.5 py-1 rounded-lg transition-colors"
+                            >
+                              Re-Open
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { LoginScreen } from '../screens/LoginScreen';
 import { SignUpScreen } from '../screens/SignUpScreen';
@@ -10,7 +10,6 @@ import { PredictiveScreen } from '../screens/PredictiveScreen';
 import { audio } from '../utils/audio';
 import { 
   FileText, 
-  Map, 
   Trophy, 
   UserCircle,
   HelpCircle,
@@ -27,6 +26,13 @@ export const Navigation: React.FC = () => {
   
   // Main app tab state: 'report' | 'feed' | 'stats' | 'predictive' | 'profile'
   const [activeTab, setActiveTab] = useState<'report' | 'feed' | 'stats' | 'predictive' | 'profile'>('report');
+
+  // Direct user to report tab on successful sign in / signup
+  useEffect(() => {
+    if (user) {
+      setActiveTab('report');
+    }
+  }, [user]);
 
   const handleTabChange = (tab: 'report' | 'feed' | 'stats' | 'predictive' | 'profile') => {
     audio.playClick();

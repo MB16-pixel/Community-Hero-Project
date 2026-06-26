@@ -13,8 +13,11 @@ import {
   CheckCircle2, 
   Image as ImageIcon,
   Flame,
-  Award
+  Award,
+  ShieldAlert,
+  Search
 } from 'lucide-react';
+import { collection, onSnapshot } from 'firebase/firestore';
 
 export const HomeScreen: React.FC = () => {
   const { user, gainXP } = useAuth();
@@ -32,10 +35,27 @@ export const HomeScreen: React.FC = () => {
   const [success, setSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // AI Explain states
-  const [isExplaining, setIsExplaining] = useState(false);
-  const [aiExplanation, setAiExplanation] = useState<string | null>(null);
-  const [explainError, setExplainError] = useState<string | null>(null);
+  // Severity Level State (Automated and Manual override)
+  const [severity, setSeverity] = useState<'Low' | 'Medium' | 'High' | 'Critical'>('Medium');
+  const [severityExplanation, setSeverityExplanation] = useState<string>('');
+
+  // Semantic Duplicate Detection
+  const [existingIssues, setExistingIssues] = useState<IssueReport[]>([]);
+  const [isCheckingDuplicates, setIsCheckingDuplicates] = useState(false);
+  const [duplicateResult, setDuplicateResult] = useState<{ isDuplicate: boolean; duplicateOfId: string | null; explanation: string | null } | null>(null);
+  const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
+
+  // Load existing issues for duplicate check
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, 'issues'), (snapshot) => {
+      const list: IssueReport[] = [];
+      snapshot.forEach((docSnap) => {
+        list.push({ issueId: docSnap.id, ...docSnap.data() } as IssueReport);
+      });
+      setExistingIssues(list);
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Popup Toast Notification State
   const [toast, setToast] = useState<{ message: string; type: 'error' | 'success' } | null>(null);
@@ -100,61 +120,50 @@ export const HomeScreen: React.FC = () => {
     }
   };
 
-  // AI Explain handler
-  const handleAiExplain = async () => {
-    if (!description.trim()) return;
+  // Semantic Duplicate Check handler
+  const handleCheckDuplicates = async () => {
+    if (!description.trim()) {
+      showNotification("Please provide a description to scan for duplicates.", "error");
+      return;
+    }
     audio.playClick();
-    setIsExplaining(true);
-    setExplainError(null);
-    setAiExplanation(null);
+    setIsCheckingDuplicates(true);
+    setDuplicateResult(null);
+    setShowDuplicateWarning(false);
 
     try {
-      const response = await fetch('/api/explain', {
+      const openIssues = existingIssues.filter(issue => issue.status !== 'Resolved');
+
+      const response = await fetch('/api/detect-duplicates', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           description: description.trim(),
+          address: address.trim(),
           category: category,
+          existingIssues: openIssues
         }),
       });
 
       if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.error || 'Failed to fetch explanation');
+        throw new Error('Failed to analyze duplicates');
       }
 
       const data = await response.json();
-      if (data.analysis) {
-        setAiExplanation(data.analysis);
-        audio.playSuccess();
-      } else if (data.error) {
-        throw new Error(data.error);
+      setDuplicateResult(data);
+      if (data.isDuplicate) {
+        setShowDuplicateWarning(true);
+        audio.playTick();
       } else {
-        throw new Error('Invalid server response');
+        showNotification("No semantic duplicates found! Your report is unique.", "success");
       }
     } catch (err: any) {
       console.error(err);
-      const errMsg = err?.message || String(err);
-      
-      if (
-        errMsg.includes("503") || 
-        errMsg.includes("UNAVAILABLE") || 
-        errMsg.includes("high demand") || 
-        errMsg.includes("temporary") ||
-        errMsg.includes("status") ||
-        errMsg.includes("code") ||
-        errMsg.includes("Resource exhausted") ||
-        errMsg.startsWith("{")
-      ) {
-        setExplainError("An error occurred: The AI service is currently experiencing very high demand. Spikes in demand are temporary, so please wait a moment and try again!");
-      } else {
-        setExplainError(errMsg || 'Failed to get Gemini analysis.');
-      }
-      audio.playTick();
+      showNotification("Failed to check duplicates. Please try again.", "error");
     } finally {
-      setIsExplaining(false);
+      setIsCheckingDuplicates(false);
     }
   };
 
@@ -178,7 +187,7 @@ export const HomeScreen: React.FC = () => {
     setSubmitting(true);
     const issueId = 'issue_' + Math.random().toString(36).substring(2, 11);
     const path = `issues/${issueId}`;
-    const mediaUrl = uploadedFileBase64 || "https://images.unsplash.com/photo-1582407947304-fd86f028f716?auto=format&fit=crop&w=800&q=80"; // neutral street/community fallback
+    const mediaUrl = uploadedFileBase64 || "https://images.unsplash.com/photo-1582407947304-fd86f028f716?auto=format&fit=crop&w=800&q=80";
 
     try {
       const newIssue: IssueReport = {
@@ -190,7 +199,12 @@ export const HomeScreen: React.FC = () => {
         category: category,
         status: 'Pending',
         timestamp: new Date().toISOString(),
-        reporterName: user.username
+        reporterName: user.username,
+        severity: severity,
+        severityExplanation: severityExplanation || "Assigned neighborhood report severity.",
+        pledges: [],
+        verificationsCount: 0,
+        verifiedUsers: []
       };
 
       // 1. Submit Issue to Firestore issues collection
@@ -207,6 +221,10 @@ export const HomeScreen: React.FC = () => {
       setDescription('');
       setAddress('');
       setUploadedFileBase64('');
+      setSeverity('Medium');
+      setSeverityExplanation('');
+      setDuplicateResult(null);
+      setShowDuplicateWarning(false);
 
       // Auto-hide success overlay after 4 seconds
       setTimeout(() => {
@@ -224,7 +242,7 @@ export const HomeScreen: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#F9F7F2] overflow-y-auto relative">
+    <div className="flex flex-col h-full bg-[#F9F7F2] overflow-y-auto scrollbar-none relative">
       {/* Toast Notification Container */}
       <AnimatePresence>
         {toast && (
@@ -320,120 +338,127 @@ export const HomeScreen: React.FC = () => {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Description */}
-            <div>
-              <label className="block text-[10px] uppercase font-bold text-[#7A7A7A] tracking-wider mb-2">
+            <div className="space-y-2">
+              <label className="block text-[10px] uppercase font-bold text-[#7A7A7A] tracking-wider">
                 What's the issue?
               </label>
-              <div className="relative">
-                <textarea
-                  placeholder="Describe the problem (e.g., Deep pothole in front of supermarket making driving hazardous...)"
-                  rows={4}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="w-full pl-4 pr-[116px] pt-3 pb-3 bg-[#FBF9F6] border border-[#E5E0D5] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#5A6B5D]/20 focus:border-[#5A6B5D] transition-all text-[#3D3D3D] resize-none"
-                />
+              <textarea
+                placeholder="Describe the problem (e.g., Deep pothole in front of supermarket making driving hazardous...)"
+                rows={4}
+                value={description}
+                onChange={(e) => {
+                  setDescription(e.target.value);
+                  setDuplicateResult(null); // clear duplicates result when description changes
+                }}
+                className="w-full px-4 py-3 bg-[#FBF9F6] border border-[#E5E0D5] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#5A6B5D]/20 focus:border-[#5A6B5D] transition-all text-[#3D3D3D] resize-none scrollbar-none"
+              />
 
-                {/* AI Explain Button inside bottom right */}
-                {description.trim().length >= 5 && (
+              {description.trim().length >= 5 && (
+                <div className="pt-1">
                   <button
                     type="button"
-                    onClick={handleAiExplain}
-                    disabled={isExplaining}
-                    className="absolute bottom-2.5 right-2.5 flex flex-col items-center justify-center bg-[#5A6B5D] hover:bg-[#455247] disabled:bg-gray-400 text-white rounded-lg cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-                    style={{ width: '100px', height: '40px' }}
-                    aria-label="Rephrase issue with gemini ai"
+                    onClick={handleCheckDuplicates}
+                    disabled={isCheckingDuplicates}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#FFF2ED] hover:bg-[#FFE3D8] text-[#D9835D] font-bold text-xs rounded-xl transition-all cursor-pointer border border-[#FEE3D8]"
                   >
-                    {isExplaining ? (
-                      <span className="text-[9px] leading-tight font-bold text-center">Rephrasing...</span>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center text-center">
-                        <Sparkles className="w-3.5 h-3.5 text-[#EAE4D8] mb-0.5" />
-                        <span className="text-[8px] leading-[9px] font-black">Rephrase Issue</span>
-                      </div>
-                    )}
+                    <Search className={`w-4 h-4 mx-1.5 ${isCheckingDuplicates ? 'animate-spin' : ''}`} />
+                    <span>{isCheckingDuplicates ? 'Scanning Duplicates...' : 'Scan For Duplicates'}</span>
                   </button>
-                )}
+                </div>
+              )}
+
+              {/* Semantic Duplicate Warning / Success Card */}
+              {duplicateResult && (
+                <div className={`p-3.5 rounded-2xl border text-xs leading-relaxed space-y-1 ${
+                  duplicateResult.isDuplicate 
+                    ? 'bg-amber-50/90 border-amber-200 text-amber-800 shadow-sm shadow-amber-900/5' 
+                    : 'bg-emerald-50/90 border-emerald-100 text-emerald-800 shadow-sm shadow-emerald-900/5'
+                }`}>
+                  <div className="flex items-center gap-2 font-bold">
+                    {duplicateResult.isDuplicate ? (
+                      <>
+                        <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
+                        <span>Potential Duplicate Warning!</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span>Verified Unique Report</span>
+                      </>
+                    )}
+                  </div>
+                  <p className="text-stone-600 font-medium">
+                    {duplicateResult.explanation}
+                  </p>
+                  {duplicateResult.isDuplicate && (
+                    <div className="pt-1.5 border-t border-amber-200/50 mt-1.5 text-[11px] text-amber-900 font-bold">
+                      Tip: You can use the Feed to view this existing issue and pledge resources or help resolve it!
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Category and Severity Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Category Select */}
+              <div className="space-y-2">
+                <label className="block text-[10px] uppercase font-bold text-[#7A7A7A] tracking-wider">
+                  Issue Category
+                </label>
+                <select
+                  value={category}
+                  onChange={(e) => {
+                    audio.playClick();
+                    setCategory(e.target.value);
+                  }}
+                  className="w-full px-4 py-3 bg-[#FBF9F6] border border-[#E5E0D5] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#5A6B5D]/20 focus:border-[#5A6B5D] transition-all text-[#3D3D3D] cursor-pointer"
+                >
+                  {categoriesList.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
               </div>
 
-              {isExplaining && (
-                <div className="mt-3 p-3 bg-[#FBF9F6] border border-dashed border-[#5A6B5D]/30 rounded-xl text-xs space-y-1 animate-pulse text-[#5A6B5D]">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="w-3.5 h-3.5 animate-spin text-[#5A6B5D]" />
-                    <span className="font-bold">Rephrasing with Gemini AI...</span>
-                  </div>
-                </div>
-              )}
-
-              {explainError && (
-                <div className="mt-3 p-3 bg-rose-50 border border-rose-100 text-rose-600 rounded-xl text-xs flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
-                  <span>{explainError}</span>
-                </div>
-              )}
-
-              {aiExplanation && !isExplaining && (
-                <div className="mt-3 p-3.5 bg-gradient-to-br from-[#FDFCF7] to-[#FBF9F6] border border-[#E5E0D5] rounded-xl text-xs text-[#3D3D3D] space-y-2.5 shadow-inner">
-                  <div className="flex items-center justify-between border-b border-[#EDE9E0] pb-1.5">
-                    <div className="flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-[#5A6B5D]" />
-                      <span className="font-bold text-[#2C362E] uppercase tracking-wider text-[9px]">Suggested Rephrasing</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          audio.playSuccess();
-                          setDescription(aiExplanation);
-                          setAiExplanation(null);
-                        }}
-                        className="text-[10px] text-[#5A6B5D] hover:text-[#455247] font-bold cursor-pointer underline decoration-dotted"
-                      >
-                        Apply Rephrasing
-                      </button>
-                      <span className="text-[#EDE9E0]">|</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          audio.playClick();
-                          setAiExplanation(null);
-                        }}
-                        className="text-[10px] text-[#7A7A7A] hover:text-[#3D3D3D] font-bold cursor-pointer"
-                      >
-                        Dismiss
-                      </button>
-                    </div>
-                  </div>
-                  <div className="leading-relaxed font-sans text-stone-700 italic">
-                    "{aiExplanation}"
-                  </div>
-                </div>
-              )}
-
-            {/* Category Select */}
-            <div>
-              <label className="block text-[10px] uppercase font-bold text-[#7A7A7A] tracking-wider mb-2">
-                Issue Category
-              </label>
-              <select
-                value={category}
-                onChange={(e) => {
-                  audio.playClick();
-                  setCategory(e.target.value);
-                }}
-                className="w-full px-4 py-3 bg-[#FBF9F6] border border-[#E5E0D5] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#5A6B5D]/20 focus:border-[#5A6B5D] transition-all text-[#3D3D3D] cursor-pointer"
-              >
-                {categoriesList.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
-              </select>
-            </div>
+              {/* Severity Select */}
+              <div className="space-y-2">
+                <label className="block text-[10px] uppercase font-bold text-[#7A7A7A] tracking-wider">
+                  Severity Level
+                </label>
+                <select
+                  value={severity}
+                  onChange={(e) => {
+                    audio.playClick();
+                    setSeverity(e.target.value as any);
+                  }}
+                  className={`w-full px-4 py-3 border rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#5A6B5D]/20 focus:border-[#5A6B5D] transition-all cursor-pointer ${
+                    severity === 'Low' ? 'bg-[#F1F5F9] border-slate-200 text-slate-700' :
+                    severity === 'Medium' ? 'bg-[#FEF9C3] border-yellow-200 text-yellow-800' :
+                    severity === 'High' ? 'bg-[#FFEDD5] border-orange-200 text-orange-800' :
+                    'bg-[#FEE2E2] border-red-200 text-red-800'
+                  }`}
+                >
+                  <option value="Low">Low - Cosmetic/Minor</option>
+                  <option value="Medium">Medium - Disturbance</option>
+                  <option value="High">High - Safety Hazard</option>
+                  <option value="Critical">Critical - Immediate Danger</option>
+                </select>
+              </div>
             </div>
 
-            {/* Address */}
-            <div>
-              <label className="block text-[10px] uppercase font-bold text-[#7A7A7A] tracking-wider mb-2">
+            {/* Severity explanation display if provided by AI */}
+            {severityExplanation && (
+              <div className="p-3 bg-[#FDFCF9] border border-[#EDE9E0] rounded-2xl text-[11px] text-[#6B7F6D] italic flex items-start gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-[#5A6B5D] shrink-0 mt-0.5" />
+                <span><strong>Gemini severity context:</strong> {severityExplanation}</span>
+              </div>
+            )}
+
+            {/* Address & Location Section */}
+            <div className="space-y-2">
+              <label className="block text-[10px] uppercase font-bold text-[#7A7A7A] tracking-wider">
                 Address or Location
               </label>
               <div className="relative">

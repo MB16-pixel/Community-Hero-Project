@@ -8,7 +8,7 @@ service cloud.firestore {
 
     // Primitive validation helpers
     function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_-]+$');
+      return id is string && id.size() <= 128 && id.matches('^[-a-zA-Z0-9_]+$');
     }
 
     function incoming() {
@@ -39,7 +39,18 @@ service cloud.firestore {
         && data.category is string && data.category.size() <= 200
         && data.status is string && (data.status == 'Pending' || data.status == 'Verified' || data.status == 'Resolved')
         && (data.timestamp is string || data.timestamp is timestamp)
-        && (!('reporterName' in data) || (data.reporterName is string && data.reporterName.size() <= 500));
+        && (!('reporterName' in data) || (data.reporterName is string && data.reporterName.size() <= 500))
+        && (!('severity' in data) || (data.severity is string))
+        && (!('severityExplanation' in data) || (data.severityExplanation is string))
+        && (!('latitude' in data) || (data.latitude is number))
+        && (!('longitude' in data) || (data.longitude is number))
+        && (!('pledges' in data) || (data.pledges is list))
+        && (!('resolvedMediaUrl' in data) || (data.resolvedMediaUrl is string))
+        && (!('resolvedNotes' in data) || (data.resolvedNotes is string))
+        && (!('resolvedBy' in data) || (data.resolvedBy is string))
+        && (!('resolvedTimestamp' in data) || (data.resolvedTimestamp is string))
+        && (!('verificationsCount' in data) || (data.verificationsCount is int || data.verificationsCount is number))
+        && (!('verifiedUsers' in data) || (data.verifiedUsers is list));
     }
 
     // Budget Allocation Entity Validation Helper
@@ -69,7 +80,7 @@ service cloud.firestore {
       allow read: if true;
       allow create: if isValidId(issueId) && isValidIssue(incoming());
       allow update: if isValidId(issueId) && isValidIssue(incoming());
-      allow delete: if false; // Issues are archival
+      allow delete: if isValidId(issueId);
     }
 
     // Rules for Budget Allocations

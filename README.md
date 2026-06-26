@@ -1,4 +1,4 @@
-# 🏛️ Community Hero: Hyperlocal Problem Solver
+# 🏛️ Community Hero: Civic Hazard Hub
 
 An interactive, gamified, and AI-powered civic engagement platform designed for neighbors to report local hazards, collaborate on resolutions, and forecast urban infrastructure risks.
 
@@ -14,6 +14,7 @@ An interactive, gamified, and AI-powered civic engagement platform designed for 
 ### 2. 🧠 Gemini AI Rephrasing Assistant
 - **Professional Rephraser**: Integrates the official `@google/genai` SDK via a secure server-side Express proxy to rewrite raw, informal reports (e.g., *"very deep pothole"*) into polite, highly professional, and descriptive descriptions suited for city hazard logs.
 - **Context-Aware Previews**: Displays suggested phrasing on an interactive card within the input field. Users can instantly choose to **Apply Rephrasing** (auto-filling the text area) or **Dismiss**.
+- **Exponential Backoff Resilience**: Uses custom server-side retries to smoothly manage transient 503 UNAVAILABLE or 429 rate-limit surges on Gemini API endpoints without impacting user experience.
 
 ### 3. 🎮 Gamification & Citizen Leaderboard
 - **Dynamic XP Engine**: Gain **+50 Experience Points (XP)** for every civic report filed.
@@ -24,6 +25,7 @@ An interactive, gamified, and AI-powered civic engagement platform designed for 
 - **Real-Time Synchronization**: Instantly reflects issues reported by other users in the district.
 - **Smart Filtering**: Filter feed reports by *All*, *My Issues*, or *Nearby* (tailored to the logged-in user's regional profile).
 - **Collaborative Status Lifecycle**: Community members can verify or resolve issues directly, changing status from *Pending* to *Verified* or *Resolved*.
+- **Demo Seeding Pipeline**: Easily seed fully populated, realistic mock records (with real coordinates, categories, and high-fidelity mock media) to demonstrate the app's full capabilities instantly.
 
 ### 5. 📊 AI Predictive Analytics & Risk Forecasting
 - **Live Civic Timelines**: Implements **Recharts** area charts charting the historical accumulation of community reports.

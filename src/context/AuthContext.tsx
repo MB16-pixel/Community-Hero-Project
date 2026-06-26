@@ -238,12 +238,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const path = `users/${user.uid}`;
 
     try {
+      // 1. Delete all issues associated with this user
+      const issuesQuery = query(collection(db, 'issues'), where('userId', '==', user.uid));
+      const issuesSnap = await getDocs(issuesQuery);
+      const deletePromises = issuesSnap.docs.map(docSnap => deleteDoc(doc(db, 'issues', docSnap.id)));
+      await Promise.all(deletePromises);
+
+      // 2. Delete the user document
       const userRef = doc(db, 'users', user.uid);
       await deleteDoc(userRef);
       logout();
     } catch (err: any) {
       const wrappedError = handleFirestoreError(err, OperationType.DELETE, path, user.uid, user.email);
-      setError("Failed to delete account from database.");
+      setError("Failed to delete account and reports from database.");
       throw wrappedError;
     } finally {
       setLoading(false);
