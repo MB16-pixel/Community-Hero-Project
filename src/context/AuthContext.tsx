@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebaseConfig';
 import { UserProfile } from '../types';
+import { audio } from '../utils/audio';
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -156,7 +157,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const gainXP = async (points: number) => {
     if (!user) return;
     const path = `users/${user.uid}`;
-    const newXP = user.xp + points;
+    const oldXP = user.xp;
+    const newXP = oldXP + points;
     
     try {
       const userRef = doc(db, 'users', user.uid);
@@ -165,6 +167,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const updatedUser = { ...user, xp: newXP };
       setUser(updatedUser);
       localStorage.setItem('community_hero_session', JSON.stringify(updatedUser));
+
+      // Level-up detection (200 XP per level)
+      const oldLevel = Math.floor(oldXP / 200) + 1;
+      const newLevel = Math.floor(newXP / 200) + 1;
+
+      if (newLevel > oldLevel) {
+        audio.playLevelUp();
+      } else {
+        audio.playSuccess();
+      }
     } catch (err: any) {
       const wrappedError = handleFirestoreError(err, OperationType.UPDATE, path, user.uid, user.email);
       setError("Failed to update experience points.");

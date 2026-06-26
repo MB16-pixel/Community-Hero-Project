@@ -1,11 +1,13 @@
 import React from 'react';
 import { AuthProvider } from './context/AuthContext';
 import { Navigation } from './navigation/Navigation';
-import { Wifi, Battery, ShieldAlert, Sparkles, AlertCircle } from 'lucide-react';
+import { Wifi, Battery, ShieldAlert, Sparkles, AlertCircle, Volume2, VolumeX } from 'lucide-react';
+import { audio } from './utils/audio';
 
 export default function App() {
   // Simple state to simulate current time inside the device status bar
   const [time, setTime] = React.useState('09:41');
+  const [muted, setMuted] = React.useState(audio.getMuted());
 
   React.useEffect(() => {
     const updateTime = () => {
@@ -20,6 +22,15 @@ export default function App() {
     const interval = setInterval(updateTime, 60000);
     return () => clearInterval(interval);
   }, []);
+
+  const toggleSound = () => {
+    const nextMuted = !muted;
+    audio.setMuted(nextMuted);
+    setMuted(nextMuted);
+    if (!nextMuted) {
+      audio.playClick();
+    }
+  };
 
   return (
     <AuthProvider>
@@ -59,10 +70,23 @@ export default function App() {
                 <div className="w-2 h-2 bg-slate-400 rounded-full mr-1" />
                 <span className="text-[8px] text-slate-300 font-bold">HERO LINK</span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <Wifi className="w-3.5 h-3.5" />
-                <span className="text-[9px]">5G</span>
-                <Battery className="w-4 h-4" />
+              <div className="flex items-center gap-2.5">
+                <button 
+                  onClick={toggleSound} 
+                  className="p-1 hover:bg-white/15 rounded-md transition-colors focus:outline-none flex items-center justify-center cursor-pointer"
+                  aria-label="Toggle Sound Effects"
+                >
+                  {muted ? (
+                    <VolumeX className="w-3.5 h-3.5 text-white/60" />
+                  ) : (
+                    <Volume2 className="w-3.5 h-3.5 text-white" />
+                  )}
+                </button>
+                <div className="flex items-center gap-1">
+                  <Wifi className="w-3.5 h-3.5" />
+                  <span className="text-[9px]">5G</span>
+                  <Battery className="w-4 h-4" />
+                </div>
               </div>
             </div>
 

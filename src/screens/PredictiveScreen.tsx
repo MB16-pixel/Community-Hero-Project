@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { db } from '../firebaseConfig';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { IssueReport } from '../types';
+import { audio } from '../utils/audio';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -386,8 +387,11 @@ export const PredictiveScreen: React.FC = () => {
               </label>
               <div className="grid grid-cols-3 gap-1.5">
                 <button
-                  onClick={() => setResolutionDelay('swift')}
-                  className={`py-2 px-2.5 rounded-xl text-[10px] font-bold transition-all border ${
+                  onClick={() => {
+                    audio.playTick();
+                    setResolutionDelay('swift');
+                  }}
+                  className={`py-2 px-2.5 rounded-xl text-[10px] font-bold transition-all border cursor-pointer ${
                     resolutionDelay === 'swift'
                       ? 'bg-[#5A6B5D] text-white border-[#5A6B5D]'
                       : 'bg-white hover:bg-[#F2EDE2]/30 text-[#5A6B5D] border-[#EDE9E0]'
@@ -397,8 +401,11 @@ export const PredictiveScreen: React.FC = () => {
                   <span className="block text-[8px] opacity-85 mt-0.5">Under 3 Days</span>
                 </button>
                 <button
-                  onClick={() => setResolutionDelay('standard')}
-                  className={`py-2 px-2.5 rounded-xl text-[10px] font-bold transition-all border ${
+                  onClick={() => {
+                    audio.playTick();
+                    setResolutionDelay('standard');
+                  }}
+                  className={`py-2 px-2.5 rounded-xl text-[10px] font-bold transition-all border cursor-pointer ${
                     resolutionDelay === 'standard'
                       ? 'bg-[#EAA85D] text-white border-[#EAA85D]'
                       : 'bg-white hover:bg-[#F2EDE2]/30 text-[#EAA85D] border-[#EDE9E0]'
@@ -408,8 +415,11 @@ export const PredictiveScreen: React.FC = () => {
                   <span className="block text-[8px] opacity-85 mt-0.5">Standard Buffer</span>
                 </button>
                 <button
-                  onClick={() => setResolutionDelay('neglect')}
-                  className={`py-2 px-2.5 rounded-xl text-[10px] font-bold transition-all border ${
+                  onClick={() => {
+                    audio.playTick();
+                    setResolutionDelay('neglect');
+                  }}
+                  className={`py-2 px-2.5 rounded-xl text-[10px] font-bold transition-all border cursor-pointer ${
                     resolutionDelay === 'neglect'
                       ? 'bg-[#D9835D] text-white border-[#D9835D]'
                       : 'bg-white hover:bg-[#F2EDE2]/30 text-[#D9835D] border-[#EDE9E0]'
@@ -433,7 +443,10 @@ export const PredictiveScreen: React.FC = () => {
                 max="90" 
                 step="15"
                 value={forecastHorizon} 
-                onChange={(e) => setForecastHorizon(Number(e.target.value))}
+                onChange={(e) => {
+                  audio.playTick();
+                  setForecastHorizon(Number(e.target.value));
+                }}
                 className="w-full accent-[#5A6B5D] h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer"
               />
             </div>

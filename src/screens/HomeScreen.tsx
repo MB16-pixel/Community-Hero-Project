@@ -3,6 +3,8 @@ import { useAuth } from '../context/AuthContext';
 import { db, handleFirestoreError, OperationType } from '../firebaseConfig';
 import { doc, setDoc } from 'firebase/firestore';
 import { IssueReport } from '../types';
+import { audio } from '../utils/audio';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   AlertTriangle, 
   MapPin, 
@@ -29,6 +31,32 @@ export const HomeScreen: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // AI Explain states
+  const [isExplaining, setIsExplaining] = useState(false);
+  const [aiExplanation, setAiExplanation] = useState<string | null>(null);
+  const [explainError, setExplainError] = useState<string | null>(null);
+
+  // Popup Toast Notification State
+  const [toast, setToast] = useState<{ message: string; type: 'error' | 'success' } | null>(null);
+
+  const showNotification = (message: string, type: 'error' | 'success' = 'error') => {
+    setToast({ message, type });
+    if (type === 'error') {
+      audio.playTick();
+    } else {
+      audio.playSuccess();
+    }
+  };
+
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => {
+        setToast(null);
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
   
   // Available categories
   const categoriesList = [
@@ -63,11 +91,70 @@ export const HomeScreen: React.FC = () => {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      audio.playSelect();
       const reader = new FileReader();
       reader.onloadend = () => {
         setUploadedFileBase64(reader.result as string);
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  // AI Explain handler
+  const handleAiExplain = async () => {
+    if (!description.trim()) return;
+    audio.playClick();
+    setIsExplaining(true);
+    setExplainError(null);
+    setAiExplanation(null);
+
+    try {
+      const response = await fetch('/api/explain', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          description: description.trim(),
+          category: category,
+        }),
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to fetch explanation');
+      }
+
+      const data = await response.json();
+      if (data.analysis) {
+        setAiExplanation(data.analysis);
+        audio.playSuccess();
+      } else if (data.error) {
+        throw new Error(data.error);
+      } else {
+        throw new Error('Invalid server response');
+      }
+    } catch (err: any) {
+      console.error(err);
+      const errMsg = err?.message || String(err);
+      
+      if (
+        errMsg.includes("503") || 
+        errMsg.includes("UNAVAILABLE") || 
+        errMsg.includes("high demand") || 
+        errMsg.includes("temporary") ||
+        errMsg.includes("status") ||
+        errMsg.includes("code") ||
+        errMsg.includes("Resource exhausted") ||
+        errMsg.startsWith("{")
+      ) {
+        setExplainError("An error occurred: The AI service is currently experiencing very high demand. Spikes in demand are temporary, so please wait a moment and try again!");
+      } else {
+        setExplainError(errMsg || 'Failed to get Gemini analysis.');
+      }
+      audio.playTick();
+    } finally {
+      setIsExplaining(false);
     }
   };
 
@@ -79,12 +166,12 @@ export const HomeScreen: React.FC = () => {
     setErrorMsg(null);
 
     if (!description.trim()) {
-      setErrorMsg("Please provide an issue description.");
+      showNotification("Please provide an issue description.", "error");
       return;
     }
 
     if (!address.trim()) {
-      setErrorMsg("Please provide the address or location of the issue.");
+      showNotification("Please provide the address or location of the issue.", "error");
       return;
     }
 
@@ -114,6 +201,7 @@ export const HomeScreen: React.FC = () => {
 
       // Trigger success flow
       setSuccess(true);
+      showNotification("Issue Filed Successfully! You gained +50 XP.", "success");
       
       // Reset form
       setDescription('');
@@ -127,7 +215,8 @@ export const HomeScreen: React.FC = () => {
 
     } catch (err: any) {
       const wrappedError = handleFirestoreError(err, OperationType.WRITE, path, user.uid, user.email);
-      setErrorMsg(err.message || "Failed to submit issue. Please try again.");
+      const msg = err.message || "Failed to submit issue. Please try again.";
+      showNotification(msg, "error");
       console.error(wrappedError);
     } finally {
       setSubmitting(false);
@@ -135,7 +224,60 @@ export const HomeScreen: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#F9F7F2] overflow-y-auto">
+    <div className="flex flex-col h-full bg-[#F9F7F2] overflow-y-auto relative">
+      {/* Toast Notification Container */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: -50, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+            className="fixed top-5 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4"
+          >
+            <div className={`flex items-start gap-3 p-4 rounded-2xl shadow-xl backdrop-blur-md border ${
+              toast.type === 'error' 
+                ? 'bg-white/95 border-rose-200 text-[#3D3D3D] shadow-rose-900/5' 
+                : 'bg-white/95 border-emerald-200 text-[#3D3D3D] shadow-emerald-900/5'
+            }`}>
+              <div className="shrink-0 mt-0.5">
+                {toast.type === 'error' ? (
+                  <div className="p-1.5 bg-rose-50 rounded-lg">
+                    <AlertTriangle className="w-5 h-5 text-rose-600 animate-bounce" />
+                  </div>
+                ) : (
+                  <div className="p-1.5 bg-emerald-50 rounded-lg">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">
+                  {toast.type === 'error' ? 'Validation Alert' : 'Success Notification'}
+                </p>
+                <p className="text-xs text-[#3D3D3D] font-medium leading-relaxed">
+                  {toast.message}
+                </p>
+              </div>
+
+              <button 
+                onClick={() => {
+                  audio.playClick();
+                  setToast(null);
+                }}
+                className="text-slate-400 hover:text-slate-600 transition-colors p-1 cursor-pointer"
+              >
+                <span className="sr-only">Close</span>
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Header */}
       <div className="bg-[#F4EFE6] text-[#3D3D3D] px-6 py-6 rounded-b-[2.5rem] shadow-sm border-b border-[#E5E0D5] relative">
         <div className="flex justify-between items-center">
@@ -182,13 +324,90 @@ export const HomeScreen: React.FC = () => {
               <label className="block text-[10px] uppercase font-bold text-[#7A7A7A] tracking-wider mb-2">
                 What's the issue?
               </label>
-              <textarea
-                placeholder="Describe the problem (e.g., Deep pothole in front of supermarket making driving hazardous...)"
-                rows={4}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="w-full px-4 py-3 bg-[#FBF9F6] border border-[#E5E0D5] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#5A6B5D]/20 focus:border-[#5A6B5D] transition-all text-[#3D3D3D] resize-none"
-              />
+              <div className="relative">
+                <textarea
+                  placeholder="Describe the problem (e.g., Deep pothole in front of supermarket making driving hazardous...)"
+                  rows={4}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="w-full pl-4 pr-[116px] pt-3 pb-3 bg-[#FBF9F6] border border-[#E5E0D5] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#5A6B5D]/20 focus:border-[#5A6B5D] transition-all text-[#3D3D3D] resize-none"
+                />
+
+                {/* AI Explain Button inside bottom right */}
+                {description.trim().length >= 5 && (
+                  <button
+                    type="button"
+                    onClick={handleAiExplain}
+                    disabled={isExplaining}
+                    className="absolute bottom-2.5 right-2.5 flex flex-col items-center justify-center bg-[#5A6B5D] hover:bg-[#455247] disabled:bg-gray-400 text-white rounded-lg cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                    style={{ width: '100px', height: '40px' }}
+                    aria-label="Rephrase issue with gemini ai"
+                  >
+                    {isExplaining ? (
+                      <span className="text-[9px] leading-tight font-bold text-center">Rephrasing...</span>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center text-center">
+                        <Sparkles className="w-3.5 h-3.5 text-[#EAE4D8] mb-0.5" />
+                        <span className="text-[8px] leading-[9px] font-black">Rephrase Issue</span>
+                      </div>
+                    )}
+                  </button>
+                )}
+              </div>
+
+              {isExplaining && (
+                <div className="mt-3 p-3 bg-[#FBF9F6] border border-dashed border-[#5A6B5D]/30 rounded-xl text-xs space-y-1 animate-pulse text-[#5A6B5D]">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-3.5 h-3.5 animate-spin text-[#5A6B5D]" />
+                    <span className="font-bold">Rephrasing with Gemini AI...</span>
+                  </div>
+                </div>
+              )}
+
+              {explainError && (
+                <div className="mt-3 p-3 bg-rose-50 border border-rose-100 text-rose-600 rounded-xl text-xs flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
+                  <span>{explainError}</span>
+                </div>
+              )}
+
+              {aiExplanation && !isExplaining && (
+                <div className="mt-3 p-3.5 bg-gradient-to-br from-[#FDFCF7] to-[#FBF9F6] border border-[#E5E0D5] rounded-xl text-xs text-[#3D3D3D] space-y-2.5 shadow-inner">
+                  <div className="flex items-center justify-between border-b border-[#EDE9E0] pb-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-[#5A6B5D]" />
+                      <span className="font-bold text-[#2C362E] uppercase tracking-wider text-[9px]">Suggested Rephrasing</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          audio.playSuccess();
+                          setDescription(aiExplanation);
+                          setAiExplanation(null);
+                        }}
+                        className="text-[10px] text-[#5A6B5D] hover:text-[#455247] font-bold cursor-pointer underline decoration-dotted"
+                      >
+                        Apply Rephrasing
+                      </button>
+                      <span className="text-[#EDE9E0]">|</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          audio.playClick();
+                          setAiExplanation(null);
+                        }}
+                        className="text-[10px] text-[#7A7A7A] hover:text-[#3D3D3D] font-bold cursor-pointer"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  </div>
+                  <div className="leading-relaxed font-sans text-stone-700 italic">
+                    "{aiExplanation}"
+                  </div>
+                </div>
+              )}
 
             {/* Category Select */}
             <div>
@@ -197,7 +416,10 @@ export const HomeScreen: React.FC = () => {
               </label>
               <select
                 value={category}
-                onChange={(e) => setCategory(e.target.value)}
+                onChange={(e) => {
+                  audio.playClick();
+                  setCategory(e.target.value);
+                }}
                 className="w-full px-4 py-3 bg-[#FBF9F6] border border-[#E5E0D5] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#5A6B5D]/20 focus:border-[#5A6B5D] transition-all text-[#3D3D3D] cursor-pointer"
               >
                 {categoriesList.map((cat) => (

@@ -7,6 +7,7 @@ import { IssuesFeedScreen } from '../screens/IssuesFeedScreen';
 import { StatsScreen } from '../screens/StatsScreen';
 import { AccountScreen } from '../screens/AccountScreen';
 import { PredictiveScreen } from '../screens/PredictiveScreen';
+import { audio } from '../utils/audio';
 import { 
   FileText, 
   Map, 
@@ -26,6 +27,11 @@ export const Navigation: React.FC = () => {
   
   // Main app tab state: 'report' | 'feed' | 'stats' | 'predictive' | 'profile'
   const [activeTab, setActiveTab] = useState<'report' | 'feed' | 'stats' | 'predictive' | 'profile'>('report');
+
+  const handleTabChange = (tab: 'report' | 'feed' | 'stats' | 'predictive' | 'profile') => {
+    audio.playClick();
+    setActiveTab(tab);
+  };
 
   if (loading) {
     return (
@@ -82,8 +88,8 @@ export const Navigation: React.FC = () => {
       <div className="bg-white border-t border-[#EDE9E0] px-4 py-2 flex justify-around items-center shrink-0 shadow-sm rounded-t-[1.75rem] pb-safe">
         {/* Tab 1: Home Screen (Report an Issue) */}
         <button
-          onClick={() => setActiveTab('report')}
-          className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl transition-all ${
+          onClick={() => handleTabChange('report')}
+          className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl transition-all cursor-pointer ${
             activeTab === 'report' 
               ? 'text-[#5A6B5D] font-bold scale-105 bg-[#F0F5F1]' 
               : 'text-[#7A7A7A] hover:text-[#5A6B5D]'
@@ -95,8 +101,8 @@ export const Navigation: React.FC = () => {
 
         {/* Tab 2: Issues Feed */}
         <button
-          onClick={() => setActiveTab('feed')}
-          className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl transition-all ${
+          onClick={() => handleTabChange('feed')}
+          className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl transition-all cursor-pointer ${
             activeTab === 'feed' 
               ? 'text-[#5A6B5D] font-bold scale-105 bg-[#F0F5F1]' 
               : 'text-[#7A7A7A] hover:text-[#5A6B5D]'
@@ -108,8 +114,8 @@ export const Navigation: React.FC = () => {
 
         {/* Tab 3: Leaderboard & Stats */}
         <button
-          onClick={() => setActiveTab('stats')}
-          className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl transition-all ${
+          onClick={() => handleTabChange('stats')}
+          className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl transition-all cursor-pointer ${
             activeTab === 'stats' 
               ? 'text-[#5A6B5D] font-bold scale-105 bg-[#F0F5F1]' 
               : 'text-[#7A7A7A] hover:text-[#5A6B5D]'
@@ -121,8 +127,8 @@ export const Navigation: React.FC = () => {
 
         {/* Tab 4: AI Predictive Alerts */}
         <button
-          onClick={() => setActiveTab('predictive')}
-          className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl transition-all ${
+          onClick={() => handleTabChange('predictive')}
+          className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl transition-all cursor-pointer ${
             activeTab === 'predictive' 
               ? 'text-[#5A6B5D] font-bold scale-105 bg-[#F0F5F1]' 
               : 'text-[#7A7A7A] hover:text-[#5A6B5D]'
@@ -134,8 +140,8 @@ export const Navigation: React.FC = () => {
 
         {/* Tab 5: Account/Profile */}
         <button
-          onClick={() => setActiveTab('profile')}
-          className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl transition-all ${
+          onClick={() => handleTabChange('profile')}
+          className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl transition-all cursor-pointer ${
             activeTab === 'profile' 
               ? 'text-[#5A6B5D] font-bold scale-105 bg-[#F0F5F1]' 
               : 'text-[#7A7A7A] hover:text-[#5A6B5D]'
