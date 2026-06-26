@@ -14,7 +14,6 @@ An interactive, gamified, and AI-powered civic engagement platform designed for 
 ### 2. 🧠 Gemini AI Rephrasing Assistant
 - **Professional Rephraser**: Integrates the official `@google/genai` SDK via a secure server-side Express proxy to rewrite raw, informal reports (e.g., *"very deep pothole"*) into polite, highly professional, and descriptive descriptions suited for city hazard logs.
 - **Context-Aware Previews**: Displays suggested phrasing on an interactive card within the input field. Users can instantly choose to **Apply Rephrasing** (auto-filling the text area) or **Dismiss**.
-- **Exponential Backoff Resilience**: Uses custom server-side retries to smoothly manage transient 503 UNAVAILABLE or 429 rate-limit surges on Gemini API endpoints without impacting user experience.
 
 ### 3. 🎮 Gamification & Citizen Leaderboard
 - **Dynamic XP Engine**: Gain **+50 Experience Points (XP)** for every civic report filed.
