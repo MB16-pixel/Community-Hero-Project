@@ -1,0 +1,114 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global safety net - deny everything by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Primitive validation helpers
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[-a-zA-Z0-9_]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // User Entity Validation Helper
+    function isValidUser(data) {
+      return (!('uid' in data) || (data.uid is string && data.uid.size() <= 128))
+        && (!('username' in data) || (data.username is string && data.username.size() >= 2 && data.username.size() <= 100))
+        && (!('email' in data) || (data.email is string && data.email.size() <= 100))
+        && (!('password' in data) || data.password == null || (data.password is string && data.password.size() >= 4 && data.password.size() <= 100))
+        && (!('xp' in data) || (data.xp is int || data.xp is float))
+        && (!('community' in data) || data.community == null || (data.community is string && data.community.size() <= 100));
+    }
+
+    // Issue Entity Validation Helper
+    function isValidIssue(data) {
+      return (!('issueId' in data) || (data.issueId is string && data.issueId.size() <= 256))
+        && (!('userId' in data) || (data.userId is string && data.userId.size() <= 256))
+        && (!('description' in data) || (data.description is string && data.description.size() >= 1 && data.description.size() <= 50000))
+        && (!('address' in data) || (data.address is string && data.address.size() >= 1 && data.address.size() <= 10000))
+        && (!('mediaUrl' in data) || (data.mediaUrl is string))
+        && (!('category' in data) || (data.category is string && data.category.size() <= 200))
+        && (!('status' in data) || (data.status is string && (data.status == 'Pending' || data.status == 'Verified' || data.status == 'Resolved')))
+        && (!('timestamp' in data) || (data.timestamp is string || data.timestamp is timestamp))
+        && (!('reporterName' in data) || (data.reporterName is string && data.reporterName.size() <= 500))
+        && (!('severity' in data) || (data.severity is string))
+        && (!('severityExplanation' in data) || (data.severityExplanation is string))
+        && (!('latitude' in data) || (data.latitude is int || data.latitude is float))
+        && (!('longitude' in data) || (data.longitude is int || data.longitude is float))
+        && (!('pledges' in data) || (data.pledges is list))
+        && (!('resolvedMediaUrl' in data) || (data.resolvedMediaUrl is string || data.resolvedMediaUrl == null))
+        && (!('resolvedNotes' in data) || (data.resolvedNotes is string || data.resolvedNotes == null))
+        && (!('resolvedBy' in data) || (data.resolvedBy is string || data.resolvedBy == null))
+        && (!('resolvedTimestamp' in data) || (data.resolvedTimestamp is string || data.resolvedTimestamp == null))
+        && (!('verificationsCount' in data) || (data.verificationsCount is int || data.verificationsCount is float))
+        && (!('verifiedUsers' in data) || (data.verifiedUsers is list))
+        && (!('messages' in data) || (data.messages is list));
+    }
+
+    // Budget Allocation Entity Validation Helper
+    function isValidBudgetAllocation(data) {
+      return (!('allocationId' in data) || (data.allocationId is string && data.allocationId.size() <= 128))
+        && (!('userId' in data) || (data.userId is string && data.userId.size() <= 128))
+        && (!('username' in data) || (data.username is string && data.username.size() <= 100))
+        && (!('country' in data) || (data.country is string && data.country.size() <= 100))
+        && (!('riskReduction' in data) || (data.riskReduction is int || data.riskReduction is float))
+        && (!('thermalInsulationBudget' in data) || (data.thermalInsulationBudget is int || data.thermalInsulationBudget is float))
+        && (!('acousticSensorsBudget' in data) || (data.acousticSensorsBudget is int || data.acousticSensorsBudget is float))
+        && (!('pipeReplacementBudget' in data) || (data.pipeReplacementBudget is int || data.pipeReplacementBudget is float))
+        && (!('emergencyBudget' in data) || (data.emergencyBudget is int || data.emergencyBudget is float))
+        && (!('timestamp' in data) || (data.timestamp is string));
+    }
+
+    // Rules for Users collection
+    match /users/{userId} {
+      allow read: if true;
+      allow create: if request.auth != null 
+        && request.auth.uid == userId 
+        && isValidId(userId) 
+        && isValidUser(incoming()) 
+        && incoming().keys().hasAll(['uid', 'username', 'email', 'xp', 'community']);
+      allow update: if request.auth != null 
+        && request.auth.uid == userId 
+        && isValidId(userId) 
+        && isValidUser(incoming());
+      allow delete: if request.auth != null 
+        && request.auth.uid == userId 
+        && isValidId(userId);
+    }
+
+    // Rules for Issues collection
+    match /issues/{issueId} {
+      allow read: if true;
+      allow create: if request.auth != null 
+        && isValidId(issueId) 
+        && isValidIssue(incoming()) 
+        && incoming().keys().hasAll(['issueId', 'userId', 'description', 'address', 'mediaUrl', 'category', 'status', 'timestamp']);
+      allow update: if request.auth != null 
+        && isValidId(issueId) 
+        && isValidIssue(incoming());
+      allow delete: if request.auth != null 
+        && isValidId(issueId) 
+        && (existing().userId == request.auth.uid);
+    }
+
+    // Rules for Budget Allocations
+    match /budget_allocations/{allocationId} {
+      allow read: if true;
+      allow create: if request.auth != null 
+        && isValidId(allocationId) 
+        && isValidBudgetAllocation(incoming()) 
+        && incoming().keys().hasAll(['allocationId', 'userId', 'username', 'country', 'riskReduction', 'thermalInsulationBudget', 'acousticSensorsBudget', 'pipeReplacementBudget', 'emergencyBudget', 'timestamp']);
+      allow update: if false; // Allocations are immutable historical logs
+      allow delete: if false;
+    }
+  }
+}
