@@ -1,7 +1,7 @@
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -9,7 +9,8 @@ dotenv.config();
 const app = express();
 const PORT = 3000;
 
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ limit: "10mb", extended: true }));
 
 // Lazy-loaded GenAI helper to prevent server crash on startup if key is missing
 let genAiClient: GoogleGenAI | null = null;
@@ -145,19 +146,18 @@ app.post("/api/detect-duplicates", async (req, res) => {
     }
 
     if (!existingIssues || !Array.isArray(existingIssues) || existingIssues.length === 0) {
-      return res.json({ isDuplicate: false, duplicateOfId: null, explanation: null });
+      return res.json({ 
+        isDuplicate: false, 
+        duplicateOfId: null, 
+        explanation: "No other active issues exist in this area yet, so your report is completely unique! Excellent job launching this report." 
+      });
     }
 
     const aiClient = getGenAI();
 
     const systemPrompt = `You are an expert civic system optimizer. Your job is to analyze a new community issue report and compare it to a list of existing issue reports to identify if it is a duplicate.
 An issue is a duplicate if it describes the same event, damage, or hazard at the exact same location/street or within extremely close proximity (e.g. "large pothole near pharmacy" is a duplicate of "pothole on Main Street near pharmacy").
-Return a JSON object with:
-1. "isDuplicate": true if the new report is a clear duplicate of one of the existing issues, false otherwise.
-2. "duplicateOfId": The issueId of the duplicated issue from the list, or null if isDuplicate is false.
-3. "explanation": A friendly, clear 1-sentence explanation of why it is a duplicate (pointing to similarities) or why it is unique.
-
-You MUST respond ONLY with a raw JSON object matching this schema, without markdown formatting or other comments.`;
+You MUST respond ONLY with a raw JSON object matching the requested schema.`;
 
     const userPrompt = `New Issue to analyze:
 - Description: "${description}"
@@ -180,7 +180,25 @@ ${JSON.stringify(existingIssues.map((issue: any) => ({
         config: {
           systemInstruction: systemPrompt,
           temperature: 0.1,
-          responseMimeType: "application/json"
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              isDuplicate: {
+                type: Type.BOOLEAN,
+                description: "true if the new report is a duplicate of one of the existing issues, false otherwise."
+              },
+              duplicateOfId: {
+                type: Type.STRING,
+                description: "The issueId of the duplicated issue from the list, or the string 'null' or null if there is no duplicate."
+              },
+              explanation: {
+                type: Type.STRING,
+                description: "A friendly, clear 1-sentence explanation of why it is a duplicate or why it is unique."
+              }
+            },
+            required: ["isDuplicate", "duplicateOfId", "explanation"]
+          }
         },
       })
     );
@@ -189,7 +207,7 @@ ${JSON.stringify(existingIssues.map((issue: any) => ({
     let parsed = {
       isDuplicate: false,
       duplicateOfId: null as string | null,
-      explanation: null as string | null
+      explanation: "We found no similar active reports in this area. Your report is unique!"
     };
 
     try {
@@ -199,7 +217,14 @@ ${JSON.stringify(existingIssues.map((issue: any) => ({
       } else if (cleaned.startsWith("```")) {
         cleaned = cleaned.replace(/^```/, "").replace(/```$/, "").trim();
       }
-      parsed = JSON.parse(cleaned);
+      const data = JSON.parse(cleaned);
+      parsed.isDuplicate = Boolean(data.isDuplicate);
+      parsed.explanation = data.explanation || "No similar active reports found.";
+      if (data.duplicateOfId && data.duplicateOfId !== "null" && data.duplicateOfId !== "undefined") {
+        parsed.duplicateOfId = String(data.duplicateOfId);
+      } else {
+        parsed.duplicateOfId = null;
+      }
     } catch (parseErr) {
       console.error("Failed to parse duplicates JSON:", jsonText, parseErr);
     }

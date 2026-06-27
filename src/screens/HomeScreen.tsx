@@ -205,6 +205,12 @@ export const HomeScreen: React.FC = () => {
 
     try {
       const openIssues = existingIssues.filter(issue => issue.status !== 'Resolved');
+      const sanitizedIssues = openIssues.map(issue => ({
+        issueId: issue.issueId,
+        description: issue.description || "",
+        address: issue.address || "",
+        category: issue.category || ""
+      }));
 
       const response = await fetch('/api/detect-duplicates', {
         method: 'POST',
@@ -215,12 +221,13 @@ export const HomeScreen: React.FC = () => {
           description: description.trim(),
           address: address.trim(),
           category: category,
-          existingIssues: openIssues
+          existingIssues: sanitizedIssues
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to analyze duplicates');
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to analyze duplicates');
       }
 
       const data = await response.json();
@@ -228,12 +235,15 @@ export const HomeScreen: React.FC = () => {
       if (data.isDuplicate) {
         setShowDuplicateWarning(true);
         audio.playTick();
+        showNotification("Potential duplicate detected! Please review the warning below.", "error");
       } else {
         showNotification("No semantic duplicates found! Your report is unique.", "success");
+        audio.playSuccess();
       }
     } catch (err: any) {
       console.error(err);
-      showNotification("Failed to check duplicates. Please try again.", "error");
+      const errMsg = err?.message || "Failed to check duplicates. Please try again.";
+      showNotification(errMsg, "error");
     } finally {
       setIsCheckingDuplicates(false);
     }

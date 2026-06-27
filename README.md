@@ -1,4 +1,4 @@
-# 🏛️ Community Hero: Hyperlocal Problem Solver
+# 🏛️ Community Hero: Civic Hazard Hub
 
 An interactive, gamified, and AI-powered civic engagement platform designed for neighbors to report local hazards, collaborate on resolutions, and forecast urban infrastructure risks.
 
